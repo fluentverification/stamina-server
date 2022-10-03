@@ -2,7 +2,7 @@ package org.staminachecker.server;
 
 import java.util.HashMap;
 
-public class QueryMap {
+public class StaminaQueryMap {
 	public enum QueryReturnCodes {
 		SUCCESS
 		, IP_IN_USE
