@@ -1,4 +1,4 @@
-package org.staminachecker.online;
+package org.staminachecker.server;
 
 public class StaminaQuery {
 	public enum METHODS {
