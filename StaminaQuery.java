@@ -1,6 +1,25 @@
 package org.staminachecker.server;
 
 public class StaminaQuery {
+
+	// model and properties file
+	// contains the contents
+	private String modelFile;
+	private String propertiesFile;
+	// method and multithreading
+	private int method;
+	private int threads;
+	// main params
+	private double kappa;
+	private double rkappa;
+	private double window;
+	// additional options
+	private boolean transitionFile;
+	private boolean labels;
+	private int stateLimit;
+	// Query information
+	private boolean started;
+
 	public enum METHODS {
 		ITERATIVE
 		, PRIORITY
@@ -50,7 +69,19 @@ public class StaminaQuery {
 		this.transitionFile = transitionFile;
 		this.labels = labels;
 		this.stateLimit = stateLimit;
+		this.started = false;
 
+	}
+	
+	/**
+	 * Starts the query
+	 * */
+	public void start() {
+		if (this.started) {
+			return;
+		}
+		// TODO
+		this.started = true;
 	}
 
 	/**
@@ -221,21 +252,5 @@ public class StaminaQuery {
 	public void setMtateLimit(int stateLimit){
 		this.stateLimit = stateLimit;
 	}
-
-	// model and properties file
-	// contains the contents
-	private String modelFile;
-	private String propertiesFile;
-	// method and multithreading
-	private int method;
-	private int threads;
-	// main params
-	private double kappa;
-	private double rkappa;
-	private double window;
-	// additional options
-	private boolean transitionFile;
-	private boolean labels;
-	private int stateLimit;
 
 }

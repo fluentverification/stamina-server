@@ -16,6 +16,12 @@ public class QueryMap {
 	public static boolean ipLooksLikeTor(ip) {
 		return false; // TODO
 	}
+	
+	public String generateUid() {
+		String uid;
+		
+		return uid;
+	}
 
 	/**
 	 * Empty constructor.
@@ -62,6 +68,23 @@ public class QueryMap {
 		}
 		else if (ipLooksLikeTor(ip)) {
 			return IP_IS_TOR_NODE;
+		}
+		else {
+			StaminaQuery q = new StaminaQuery(
+				String modelFile
+				, String propertiesFile
+				, int method
+				, int threads
+				, double kappa
+				, double rkappa
+				, double window
+				, boolean transitionFile
+				, boolean labels                                                                                      
+				, int stateLimit
+			);
+			String uid = this.generateUid();
+			
+			q.start();
 		}
 	}
 }
