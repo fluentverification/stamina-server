@@ -36,4 +36,8 @@ public class StaminaQueries {
 			, stateLimit
 		);
 	}
+	
+	public static String getUpdate(String uid) {
+		// TODO
+	}
 }

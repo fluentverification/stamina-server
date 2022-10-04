@@ -29,7 +29,7 @@ public class StaminaController {
 		, consumes = "application/json"
 	)
 	public String getUpdate(@RequestBody String uid) {
-		// TODO
+		return staminaQueries.getUpdate(uid);
 	}
 	
 	@PostMapping(
