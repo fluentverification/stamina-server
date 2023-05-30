@@ -5,6 +5,7 @@ import secrets
 import sys
 
 from settings import Settings
+from Job import Job
 
 app = Flask(__name__)
 
@@ -35,11 +36,13 @@ def create_job(job_id, job_data=None):
 	if ip in ip_to_job and len(ip_to_job[ip]) > Settings.MAX_REQUESTS_PER_IP:
 		return f"Refused: Too many jobs for IP address {ip}", 429
 	elif ip in ip_to_job:
-		job = None
+		job = Job(job_data, job_id)
 		ip_to_job[ip].append(job)
+		jobs[job_id] = job
 	else:
-		job = None
+		job = Job(job_data, job_id)
 		ip_to_job[ip] = [job]
+		jobs[job_id] = job
 	return "Unimplemented", 501
 
 def authenticate(uname, passwd):
@@ -63,13 +66,13 @@ def post_jobs():
 		return {"error": "Request should be in JSON format"}, 415
 	request_json = request.get_json()
 	if "id" in request_json:
-		return jsonify(jobs[request_json["id"]])
+		return jobs[request_json["id"]].__json__()
 	if "create" in request_json and request_json["create"].lower() == "true":
 		# Create a job and run it
 		response = {}
 		job_id = get_random_id()
 		response["id"] = job_id
-		job_status, job_status_code = create_job(job_id)
+		job_status, job_status_code = create_job(job_id, request_json)
 		response["status"] = job_status
 		return response, job_status
 	# If not, they are trying to get all jobs. Currently, no authentication is supported for this, so it will fail always
@@ -89,7 +92,10 @@ def get_my_jobs():
 	ip = get_client_ip()
 	if not ip in ip_to_job:
 		return {"error": "This IP has no active jobs"}, 400
-	return jsonify(ip_to_job[ip])
+	my_jobs = []
+	for job in ip_to_job[ip]:
+		my_jobs.append(job.__json__())
+	return jsonify(my_jobs)
 
 @app.route("/myjobs", methods=["DELETE"])
 def delete_all_my_jobs():
