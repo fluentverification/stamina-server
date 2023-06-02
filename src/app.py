@@ -10,6 +10,7 @@ from datetime import datetime
 
 from settings import Settings, EASTER_EGG
 from Job import Job
+from web import *
 
 logfile=sys.stdout
 
@@ -125,26 +126,40 @@ def after_request(response):
 @app.route("/jobs", methods=["POST"])
 def post_jobs():
 	#jobs_lock.acquire()
+	content_type = request.headers.get("Content-Type")
+	# Handle both multipart data (as we would get from a web form,
+	# as well as a purely JSON object, in case the API wishes to encode the PRISM
+	# and CSL files within the JSON object
+	has_json = False
+	if content_type == "application/json":
+		has_json = True
+	elif "multipart/form-data" not in content_type and "application/x-www-form-urlencoded" not in content_type:
+		return f"Request not supported! (Requires either 'multipart/form-data', 'application/x-www-form-urlencoded', or 'application/json'; got {content_type})", 415
 	# check to see if there is a job ID
-	request_json = request.get_json()
-	if request_json is None:
-		#jobs_lock.release()
-		return "Request body should be in JSON format (got no JSON!)", 415
-	if "id" in request_json:
-		if request_json["id"] in jobs:
-			log(f"Providing information about {request_json['id']} to ip {get_client_ip()}")
+	request_data = None
+	if has_json:
+		request_data = request.json
+	else:
+		request_data = request.form
+	id_key = "id"
+	if id_key in request_data:
+		if request_data[id_key] in jobs:
+			log(f"Providing information about {request_data[id_key]} to ip {get_client_ip()}")
 			#jobs_lock.release()
-			return jobs[request_json["id"]].__json__()
+			return jobs[request_data[id_key]].__json__()
 		else:
 			#jobs_lock.release()
-			return {"error": f"Job with id {request_json['id']} does not exist"}, 404
-	if "create" in request_json and request_json["create"].lower() == "true":
+			return {"error": f"Job with id {request_data['id']} does not exist"}, 404
+	create_key = "create"
+	print(request_data)
+	if create_key in request_data: # and request_data[create_key].lower() == "true":
+		print("We wish to create a job")
 		# Create a job ID
 		job_id = get_random_id()
 		# Get the model file
-		model_provided = "model_file" in request_json
+		model_provided = ("model_file" in request_data and has_json) or ("model_file" in request.files)
 		# Get the properties file
-		prop_provided = "prop_file" in request_json
+		prop_provided = ("prop_file" in request_data and has_json) or ("prop_file" in request.files)
 		# Only create temporary directory if both files provided
 		path = ""
 		if model_provided and prop_provided:
@@ -152,20 +167,30 @@ def post_jobs():
 			path = f"{Settings.TMP_DIRECTORY_LOCATION}/{job_id}/"
 			if not os.path.isdir(path):
 				os.makedirs(path)
-			with open(os.path.join(path, "model.prism"), "w") as m:
-				m.write(request_json["model_file"])
-			with open(os.path.join(path, "prop.csl"), "w") as p:
-				p.write(request_json["prop_file"])
+			if has_json:
+				with open(os.path.join(path, "model.prism"), "w") as m:
+					m.write(request_data["model_file"])
+				with open(os.path.join(path, "prop.csl"), "w") as p:
+					p.write(request_data["prop_file"])
+			else:
+				print("Saving files")
+				request.files["model_file"].save(os.path.join(path, "model.prism"))
+				request.files["prop_file"].save(os.path.join(path, "prop.csl"))
 		# Create a job and run it
 		response = {}
 		response["id"] = job_id
-		job_status, job_status_code = create_job(job_id, request_json, model_provided, prop_provided, path)
+		job_status, job_status_code = create_job(job_id, request_data, model_provided, prop_provided, path)
 		response["status"] = job_status
 		#jobs_lock.release()
-		return response, job_status
+		if not "from_web" in request_data:
+			print("They are not from a web browser, returning as JSON")
+			return response, job_status
+		else:
+			print("They are from a web browser. Creating HTML")
+			return create_html_for_response(response, job_status)
 	# If not, they are trying to get all jobs. Currently, no authentication is supported for this, so it will fail always
 	check_request(request, ["username", "password"])
-	authenticated = authenticate(request["username"], request["password"])
+	authenticated = authenticate(request_data["username"], request_data["password"])
 	if authenticated:
 		#jobs_lock.release()
 		return jsonify(jobs)
