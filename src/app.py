@@ -114,6 +114,13 @@ def get_random_id():
 		secret = secrets.token_urlsafe(16)
 	return secret
 
+@app.after_request
+def after_request(response):
+	header = response.headers
+	header['Access-Control-Allow-Origin'] = '*'
+	return response
+
+
 # When we upgrade flask version we can just use @app.post
 @app.route("/jobs", methods=["POST"])
 def post_jobs():
@@ -177,7 +184,7 @@ def get_my_jobs():
 	log(f"{ip} has asked for their active jobs")
 	if not ip in ip_to_job:
 		#jobs_lock.release()
-		return {"error": "This IP has no active jobs"}, 400
+		return {"error": f"This IP ({ip}) has no active jobs"}, 400
 	my_jobs = []
 	for job in ip_to_job[ip]:
 		my_jobs.append(job.__json__())
