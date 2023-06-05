@@ -55,6 +55,9 @@ class Job:
 		self.creation_time = int(time())
 		self.path = path
 		self.ip = ip
+		self.name = "Untitled Job"
+		self.additional_logs = ""
+		self.killed = False
 		args = self.__get_args_from_data(data)
 		# create model.prism and properties.csl in docker container
 		if model_provided and prop_provided:
@@ -85,6 +88,9 @@ class Job:
 		if os.path.isdir(self.path):
 			rmtree(self.path)
 
+	def set_name(self, name):
+		self.name = name
+
 	def __str__(self):
 		data = self.__json__()
 		return jsonify(data)
@@ -93,13 +99,14 @@ class Job:
 		data = {}
 		data["uid"] = self.uid
 		if self.container is not None:
-			data["status"] = self.container.status
-			data["logs"] = self.container.logs()
+			data["status"] = self.container.status if not self.killed else "killed"
+			data["logs"] = self.get_logs()
 			data["command"] = self.command
 			data["method"] = self.method
 			data["kappa"] = self.kappa
 			data["rkappa"] = self.rkappa
 			data["window"] = self.window
+			data["name"] = self.name
 		else:
 			data["status"] = "nonexistent"
 			data["message"] = "A model or properties file (which is required) was not provided"
@@ -146,8 +153,10 @@ class Job:
 		return arg_string
 
 	def get_logs(self):
-		return self.container.logs()
+		return self.container.logs().decode("utf-8") + f"\n{self.additional_logs}"
 
 	def kill(self):
 		self.container.stop()
 		self.clean()
+		self.additional_logs = "Killed."
+		self.killed = True

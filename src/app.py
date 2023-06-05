@@ -6,13 +6,18 @@ import sys
 from time import time, sleep
 from threading import Thread, Lock
 import os
+from shutil import rmtree
 from datetime import datetime
 
 from settings import Settings, EASTER_EGG
 from Job import Job
 from web import *
 
-logfile=sys.stdout
+logfile = None
+if Settings.LOG_FILE == "":
+	logfile = sys.stdout
+else:
+	logfile = open(Settings.LOG_FILE, "a")
 
 def log(msg):
 	date_string = f'{datetime.now():%Y-%m-%d %H:%M:%S%z}'
@@ -46,6 +51,7 @@ Clean up old jobs
 	'''
 	cur_time = int(time())
 	log("Cleaning old jobs:")
+	uids_to_clean = []
 	for uid, job in jobs.items():
 		age = cur_time - job.creation_time
 		if age >= Settings.MAX_ALLOWED_TIME_PER_JOB:
@@ -54,11 +60,15 @@ Clean up old jobs
 		if age >= Settings.MAX_JOB_RETENTION_TIME:
 			ip = job.ip
 			job.clean()
-			del a[uid]
+			uids_to_clean.append(uid)
 			# Clean ip_to_job
 			cur_ip_joblist = ip_to_job[ip]
 			cur_ip_joblist.remove(job)
 			log(f"Removing job {uid}")
+			if len(ip_to_job[ip]) == 0:
+				del ip_to_job[ip]
+	for uid in uids_to_clean:
+		del jobs[uid]
 
 def get_client_ip():
 	# Get the IP if not behind a proxy
@@ -75,25 +85,27 @@ def check_request(request, required_fields):
 		if not field in request_json:
 			return False, {"error": f"Field \'{field}\' is required!"}, 400
 		
-def create_job(job_id, job_data=None, model_provided=False, prop_provided=False, path=""):
+def create_job(job_id, job_data=None, model_provided=False, prop_provided=False, path="", job_name="Untitled Job"):
 	#jobs_lock.acquire()
 	if len(jobs) > Settings.MAX_ALLOWED_JOBS:
 		#jobs_lock.release()
 		return f"Refused: too many total jobs running on server", 503
 	ip = get_client_ip()
 	job = None
-	if ip in ip_to_job and len(ip_to_job[ip]) > Settings.MAX_REQUESTS_PER_IP:
+	if ip in ip_to_job and len(ip_to_job[ip]) >= Settings.MAX_REQUESTS_PER_IP:
 		#jobs_lock.release()
-		return f"Refused: Too many jobs for IP address {ip}", 429
 		log(f"Refusing to create job for IP Address {ip}: They have too many active jobs")
+		return f"Refused: Too many jobs for IP address {ip}", 429
 	elif ip in ip_to_job:
 		job = Job(job_data, job_id, model_provided, prop_provided, path, ip)
 		ip_to_job[ip].append(job)
 		jobs[job_id] = job
+		job.set_name(job_name)
 	else:
 		job = Job(job_data, job_id, model_provided, prop_provided, path, ip)
 		ip_to_job[ip] = [job]
 		jobs[job_id] = job
+		job.set_name(job_name)
 	log(f"Creating job with id {job_id} for IP address {ip}")
 	if job.has_inputs:
 		#jobs_lock.release()
@@ -151,9 +163,9 @@ def post_jobs():
 			#jobs_lock.release()
 			return {"error": f"Job with id {request_data['id']} does not exist"}, 404
 	create_key = "create"
-	print(request_data)
+	# print(request_data)
 	if create_key in request_data: # and request_data[create_key].lower() == "true":
-		print("We wish to create a job")
+		# print("We wish to create a job")
 		# Create a job ID
 		job_id = get_random_id()
 		# Get the model file
@@ -162,6 +174,7 @@ def post_jobs():
 		prop_provided = ("prop_file" in request_data and has_json) or ("prop_file" in request.files)
 		# Only create temporary directory if both files provided
 		path = ""
+		job_name = "Untitled Job"
 		if model_provided and prop_provided:
 			# Create a temporary path
 			path = f"{Settings.TMP_DIRECTORY_LOCATION}/{job_id}/"
@@ -173,20 +186,28 @@ def post_jobs():
 				with open(os.path.join(path, "prop.csl"), "w") as p:
 					p.write(request_data["prop_file"])
 			else:
-				print("Saving files")
+				# print("Saving files")
 				request.files["model_file"].save(os.path.join(path, "model.prism"))
 				request.files["prop_file"].save(os.path.join(path, "prop.csl"))
+				#job_name = f"{request.files['model_file'].name} / {request.files['prop_file'].name}"
 		# Create a job and run it
 		response = {}
 		response["id"] = job_id
-		job_status, job_status_code = create_job(job_id, request_data, model_provided, prop_provided, path)
+		job_status, job_status_code = create_job(job_id, request_data, model_provided, prop_provided, path, job_name)
 		response["status"] = job_status
 		#jobs_lock.release()
 		if not "from_web" in request_data:
-			print("They are not from a web browser, returning as JSON")
+			log(f"IP {get_client_ip()} are not from a web browser, returning as JSON")
 			return response, job_status
+		elif job_status_code == 429:
+			# We don't need to keep garbage files
+			rmtree(path)
+			return create_html_err(f"Too many jobs for IP Address {get_client_ip()}. (Limit: {Settings.MAX_REQUESTS_PER_IP})")
+		elif job_status_code == 503:
+			rmtree(path)
+			return create_html_err("Server overloaded. Try again later.")
 		else:
-			print("They are from a web browser. Creating HTML")
+			log(f"IP {get_client_ip()} are from a web browser. Creating HTML")
 			return create_html_for_response(response, job_status)
 	# If not, they are trying to get all jobs. Currently, no authentication is supported for this, so it will fail always
 	check_request(request, ["username", "password"])
@@ -232,6 +253,17 @@ def delete_all_my_jobs():
 	#jobs_lock.release()
 	return {"message": f"Success! Deleted {jobs_to_delete_count} jobs!" }
 
+@app.route("/rename", methods=["POST"])
+def rename_job():
+	check_request(request, ["id", "name"])
+	jid = request.json["id"]
+	name = request.json["name"]
+	log(f"{get_client_ip()} wishes to rename job {jid} to name \"{name}\"")
+	if not jid in jobs:
+		return {"error": f"Job ID {jid} cannot be renamed! It does not exist!"}, 400
+	jobs[jid].set_name(name)
+	return {"success": f"Successfully renamed job {jid} to {name}"}, 200
+
 @app.route("/about", methods=["GET"])
 def about_stamina():
 	return """=================================================
@@ -268,6 +300,21 @@ Assumes the entire body of the request is the uid
 	# TODO: should probably change this to allow only https://staminachecker.org
 	response.headers['Access-Control-Allow-Origin'] = '*'
 	return response
+
+@app.route("/kill", methods=["POST"])
+def kill():
+	'''
+kills a job
+	'''
+	jid = request.get_data().decode("utf-8")
+	log(f"{get_client_ip()} has asked to kill job {jid}")
+	if jid == "":
+		return "The /kill URI takes a plaintext request format and is intended to be used via terminal!", 415
+	if not jid in jobs:
+		return f"The ID {jid} does not exist or is not known!", 415
+	jobs[jid].kill()
+	return "Success", 200
+	#del jobs[jid]
 
 #Create cleaning thread
 t = Thread(target=periodically_clean_jobs)
