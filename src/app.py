@@ -7,22 +7,14 @@ from time import time, sleep
 from threading import Thread, Lock
 import os
 from shutil import rmtree
-from datetime import datetime
+import json
+import atexit
+import signal
 
 from settings import Settings, EASTER_EGG
-from Job import Job
+from Job import Job, stop_all_docker_containers
 from web import *
-
-logfile = None
-if Settings.LOG_FILE == "":
-	logfile = sys.stdout
-else:
-	logfile = open(Settings.LOG_FILE, "a")
-
-def log(msg):
-	date_string = f'{datetime.now():%Y-%m-%d %H:%M:%S%z}'
-	print(f"[{date_string}]: {msg}", file=logfile)
-
+from log import *
 
 app = Flask(__name__)
 
@@ -85,7 +77,7 @@ def check_request(request, required_fields):
 		if not field in request_json:
 			return False, {"error": f"Field \'{field}\' is required!"}, 400
 		
-def create_job(job_id, job_data=None, model_provided=False, prop_provided=False, path="", job_name="Untitled Job"):
+def create_job(job_id, job_data=None, model_provided=False, prop_provided=False, path="", job_name=None):
 	#jobs_lock.acquire()
 	if len(jobs) > Settings.MAX_ALLOWED_JOBS:
 		#jobs_lock.release()
@@ -100,12 +92,14 @@ def create_job(job_id, job_data=None, model_provided=False, prop_provided=False,
 		job = Job(job_data, job_id, model_provided, prop_provided, path, ip)
 		ip_to_job[ip].append(job)
 		jobs[job_id] = job
-		job.set_name(job_name)
+		if job_name is not None:
+			job.set_name(job_name)
 	else:
 		job = Job(job_data, job_id, model_provided, prop_provided, path, ip)
 		ip_to_job[ip] = [job]
 		jobs[job_id] = job
-		job.set_name(job_name)
+		if job_name is not None:
+			job.set_name(job_name)
 	log(f"Creating job with id {job_id} for IP address {ip}")
 	if job.has_inputs:
 		#jobs_lock.release()
@@ -174,7 +168,7 @@ def post_jobs():
 		prop_provided = ("prop_file" in request_data and has_json) or ("prop_file" in request.files)
 		# Only create temporary directory if both files provided
 		path = ""
-		job_name = "Untitled Job"
+		job_name = None
 		if model_provided and prop_provided:
 			# Create a temporary path
 			path = f"{Settings.TMP_DIRECTORY_LOCATION}/{job_id}/"
@@ -255,9 +249,17 @@ def delete_all_my_jobs():
 
 @app.route("/rename", methods=["POST"])
 def rename_job():
-	check_request(request, ["id", "name"])
-	jid = request.json["id"]
-	name = request.json["name"]
+	content_type = request.headers.get("Content-Type")
+	request_json = request.get_json()
+	if content_type != "application/json":
+		try:
+			request_json = json.loads(request.data)
+		except Exception:
+			return {"error":"Could not rename job with data provided"}, 415
+		# return {"error":f"Requires 'application/json' format, not '{content_type}'"}, 415
+	#check_request(request, ["id", "name"])
+	jid = request_json["id"]
+	name = request_json["name"]
 	log(f"{get_client_ip()} wishes to rename job {jid} to name \"{name}\"")
 	if not jid in jobs:
 		return {"error": f"Job ID {jid} cannot be renamed! It does not exist!"}, 400
@@ -319,6 +321,18 @@ kills a job
 #Create cleaning thread
 t = Thread(target=periodically_clean_jobs)
 t.start()
+
+def exit_handler(signum, frame):
+	'''
+To be called when the program exits
+	'''
+	log(f"Exit handler was called with signum {signum}, and frame {frame}")
+	stop_all_docker_containers()
+	#t.stop()
+	exit(signum)
+
+atexit.register(exit_handler)
+signal.signal(signal.SIGINT, exit_handler)
 
 if __name__=="__main__":
 	if "--debug" in sys.argv or "-d" in sys.argv:

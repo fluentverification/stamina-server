@@ -11,6 +11,7 @@ from shutil import rmtree
 import os
 
 from settings import Settings
+from log import log
 
 client = docker.from_env()
 
@@ -43,8 +44,15 @@ def create_command_write_file(contents, filename):
 	contents = safe_terminal_string(contents)
 	return f"tee {filename} < \"{contents}\""
 
+def stop_all_docker_containers():
+	for container in client.containers.list():
+		log(f"Stopping container {container.name}...", end="")
+		container.stop()
+		log(done)
+	client.containers.prune()
+
 class Job:
-	def __init__(self, data, uid, model_provided=True, prop_provided=True, path="", ip=None, in_container_path="/tmp/"):
+	def __init__(self, data, uid, model_provided=True, prop_provided=True, path="", ip=None, in_container_path="/tmp/", create_tra_file=False):
 		'''
 	Data should be in JSON format
 		'''
@@ -58,6 +66,7 @@ class Job:
 		self.name = "Untitled Job"
 		self.additional_logs = ""
 		self.killed = False
+		self.create_tra_file = create_tra_file
 		args = self.__get_args_from_data(data)
 		# create model.prism and properties.csl in docker container
 		if model_provided and prop_provided:
@@ -68,6 +77,8 @@ class Job:
 			#prop = create_command_write_file(data["prop_file"], "properties.csl")
 			#mount = docker.types.Mount(target=in_container_path, source=self.path, read_only=True)
 			self.command = f"{SSTAMINA} {args} {in_container_path}/model.prism {in_container_path}/prop.csl" # f"sstamina {args} model.prism properties.csl"
+			if self.create_tra_file:
+				self.command += " -a transitions.tra"
 			#full_command = f"{mod} && {prop} \\\n && cat model.prism"
 			#print(f"Full command for docker container:\n{full_command}")
 			self.has_inputs = True
@@ -76,6 +87,7 @@ class Job:
 				, detach=True
 				, volumes={path:{'bind':in_container_path, 'mode':'rw'}}
 			)
+			self.name = self.container.name
 		# If model and properties files not specified, just get STAMINA version
 		else:
 			print("Either model or property file not provided!")
@@ -87,9 +99,19 @@ class Job:
 	def clean(self):
 		if os.path.isdir(self.path):
 			rmtree(self.path)
+	
+	def has_tra_file(self):
+		return self.create_tra_file and self.get_status() == "exited"
 
 	def set_name(self, name):
 		self.name = name
+
+	def get_status(self):
+		self.container.reload()
+		if self.killed:
+			return "killed"
+		else:
+			return self.container.status
 
 	def __str__(self):
 		data = self.__json__()
@@ -99,7 +121,7 @@ class Job:
 		data = {}
 		data["uid"] = self.uid
 		if self.container is not None:
-			data["status"] = self.container.status if not self.killed else "killed"
+			data["status"] = self.get_status() # self.container.status if not self.killed else "killed"
 			data["logs"] = self.get_logs()
 			data["command"] = self.command
 			data["method"] = self.method
@@ -156,6 +178,8 @@ class Job:
 		return self.container.logs().decode("utf-8") + f"\n{self.additional_logs}"
 
 	def kill(self):
+		if not self.get_status in ["killed", "exited"]:
+			return
 		self.container.stop()
 		self.clean()
 		self.additional_logs = "Killed."
