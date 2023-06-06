@@ -1,27 +1,37 @@
 # STAMINA for Servers
 
-This repository contains code to set up the STAMINA REST API through the Spring framework. It is not yet finished. Eventually we will add a Gradle build file.
+This repository contains code to allow STAMINA to be run via a REST API.
 
 ## Why are we doing this?
 
 FLUENT has recieved some grant funding to use towards some Azure servers. While IBioSym is already running on these servers, we are trying to make STAMINA/STORM able to run on these Azure servers. This is why we have dockerized it and are writing this wrapper program to read REST API calls and start STAMINA.
 
-## REST Query Parameters
+## Overview
 
-This section is a WIP.
+Each job is assigned a `id`, sometimes called a `jid` or `uid` for job ID or unique ID. These are stored in a hashed set and associated with an IP address. You can access the details of a job with its ID from any IP address (maybe should change this).
 
-STAMINA will take JSON formulated REST queries with the following parameters:
+Jobs are pruned every so often and time out every few minutes.
 
-**Status Parameter**: this parameter is used if checking the *status* of an existing job.
-- `uid`: If `uid` is provided, all other parameters are ignored. Any log output from STAMINA for job with that UID will be returned immediately.
+## Endpoints
 
-**Start-job Parameters**: These parameters are required to *start* a job
-- `modelFile`: The complete text of the PRISM language model file with which to build the model from
-- `propertiesFile`: The complete text of the CSL properties file to check
-- `kappa`: The reachability threshold
-- `rkappa`: The reduction factor fot the reachability threshold
-- `threads`: The number of threads to use (CPU limits will be enforced)
-- `method`: The method of truncation to use
-- `labels`: Whether or not to print state-labelling information
-- `stateLimit`: Enforce a state limit at `n` states
-- `transitionFile`: TODO
+- `/jobs`:
+	+ `POST`: Creates a job, which is a run of STAMINA with a specific model and properties file. Accepts `application/json` and `multipart/form-data`, and returns `application/json`.
+	+ `GET`: Gets the list of all jobs. Currently just errors because I haven't figured out a good way to authenticate yet.
+	+ `DELETE` (not yet implemented): Deletes a job with a specific ID.
+- `/myjobs`:
+	+ `GET`: Gets a list of all jobs associated with the current IP address.
+	+ `DELETE`: Deletes all active jobs associated with the current IP Address.
+- `/rename`:
+	+ `POST`: Renames a job with a certain ID.
+- `/about`:
+	+ `GET`: Gets some information about STAMINA
+- `/checkjob`
+	+ `POST`: Gets just the log information about a Job, given its UID in HTTP `POST`.
+- `/kill`
+	+ `POST`: Kills, but does not delete, a job. Job logs can still be viewed after it is killed, but not after it is deleted.
+<!--
+- `/egg` (easter egg):
+	+ `GET`: An easter egg ;)
+- `/qapla` (easter egg):
+	+ `GET`: Another easter egg 
+-->
