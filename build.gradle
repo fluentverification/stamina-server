@@ -1,0 +1,32 @@
+apply plugin: 'java'
+apply plugin: 'application'
+
+mainClassName = "org.staminachecker.server.StaminaQueries"
+
+// Java Version compatibility
+sourceCompatibility = 13
+targetCompatibility = 13
+
+configurations {
+	libBundle
+}
+
+// We will need maven for Spring
+repositories {
+    mavenCentral()
+}
+
+// TODO: I'm not good at gradle
+dependencies {
+	libBundle "org.springframework:5.3.23"
+	libBundle "org.springboot:2.7.4"
+}
+
+// Probably should create a jar
+jar {
+	manifest {
+		attributes "Main-Class": "org.staminachecker.server.StaminaQueries"
+		attributes "Multi-Release": true
+	}
+	duplicatesStrategy = DuplicatesStrategy.EXCLUDE
+}
