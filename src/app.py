@@ -329,6 +329,7 @@ To be called when the program exits
 	log(f"Exit handler was called with signum {signum}, and frame {frame}")
 	stop_all_docker_containers()
 	#t.stop()
+	rmtree(Settings.TMP_DIRECTORY_LOCATION)
 	exit(signum)
 
 atexit.register(exit_handler)

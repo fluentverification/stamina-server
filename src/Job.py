@@ -178,7 +178,7 @@ class Job:
 		return self.container.logs().decode("utf-8") + f"\n{self.additional_logs}"
 
 	def kill(self):
-		if not self.get_status in ["killed", "exited"]:
+		if self.get_status in ["killed", "exited"]:
 			return
 		self.container.stop()
 		self.clean()
