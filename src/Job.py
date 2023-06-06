@@ -48,7 +48,7 @@ def stop_all_docker_containers():
 	for container in client.containers.list():
 		log(f"Stopping container {container.name}...", end="")
 		container.stop()
-		log(done)
+		log("done")
 	client.containers.prune()
 
 class Job:
