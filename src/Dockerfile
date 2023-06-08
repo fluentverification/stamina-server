@@ -11,7 +11,7 @@
 # RUN env FLASK_APP=$FLASK_APP flask run 
 
 
-FROM tiangolo/uwsgi-nginx-flask:python3.8-alpine
+FROM tiangolo/uwsgi-nginx-flask:latest
 RUN apk --update add bash
 ENV STATIC_URL /static
 ENV STATIC_PATH /var/www/app/static

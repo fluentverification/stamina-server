@@ -125,6 +125,7 @@ def get_random_id():
 def after_request(response):
 	header = response.headers
 	header['Access-Control-Allow-Origin'] = '*'
+	header['Access-Control-Allow-Methods'] = '*'
 	return response
 
 
@@ -250,12 +251,14 @@ def delete_all_my_jobs():
 @app.route("/rename", methods=["POST"])
 def rename_job():
 	content_type = request.headers.get("Content-Type")
-	request_json = request.get_json()
+	request_json = None
 	if content_type != "application/json":
 		try:
 			request_json = json.loads(request.data)
 		except Exception:
 			return {"error":"Could not rename job with data provided"}, 415
+	else:
+		request_json = request.get_json()
 		# return {"error":f"Requires 'application/json' format, not '{content_type}'"}, 415
 	#check_request(request, ["id", "name"])
 	jid = request_json["id"]
