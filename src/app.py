@@ -254,11 +254,12 @@ def delete_job():
 	ip = get_client_ip()
 	log(f"{ip} has asked to DELETE job with ID '{jid}'")
 	if not jid in jobs:
-		log("(it does not exit)")
+		log("(it does not exist)")
 		return "Job does not exist", 400
+	j = jobs[jid]
 	del jobs[jid]
-	if jid in ip_to_job[ip]:
-		ip_to_job[ip].remove(jid)
+	if j in ip_to_job[ip]:
+		ip_to_job[ip].remove(j)
 	if len(ip_to_job[ip]) == 0:
 		del ip_to_job[ip]
 	return "Success"
