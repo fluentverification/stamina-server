@@ -248,6 +248,20 @@ def delete_all_my_jobs():
 	#jobs_lock.release()
 	return {"message": f"Success! Deleted {jobs_to_delete_count} jobs!" }
 
+@app.route("/jobs", methods=["DELETE"])
+def delete_job():
+	jid = request.get_data().decode("utf-8")
+	ip = get_client_ip()
+	log(f"{ip} has asked to DELETE job with ID '{jid}'")
+	if not jid in jobs:
+		log("(it does not exit)")
+		return "Job does not exist", 400
+	del jobs[jid]
+	ip_to_job[ip].remove(jid)
+	if len(ip_to_job[ip]) == 0:
+		del ip_to_job[ip]
+	return "Success"
+
 @app.route("/rename", methods=["POST"])
 def rename_job():
 	content_type = request.headers.get("Content-Type")
