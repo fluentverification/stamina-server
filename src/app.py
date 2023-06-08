@@ -257,7 +257,8 @@ def delete_job():
 		log("(it does not exit)")
 		return "Job does not exist", 400
 	del jobs[jid]
-	ip_to_job[ip].remove(jid)
+	if jid in ip_to_job[ip]:
+		ip_to_job[ip].remove(jid)
 	if len(ip_to_job[ip]) == 0:
 		del ip_to_job[ip]
 	return "Success"
