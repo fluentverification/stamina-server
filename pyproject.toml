@@ -1,0 +1,22 @@
+[build-system]
+requires = ["setuptools>=61.0", "docker", "flask"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "stamina_API"
+version = "0.0.0"
+authors = [
+	{ name="Joshua Jeppson", email="joshua.jeppson@usu.edu" }
+]
+description = "API for running STAMINA over the cloud"
+readme = "README.md"
+requires-python = ">=3.7"
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "License :: OSI Approved :: GPLv3 License",
+    "Operating System :: Linux",
+]
+
+[project.urls]
+"Homepage" = "https://staminachecker.org/run"
+"Repository" = "https://github.com/fluentverification/stamina-server"
