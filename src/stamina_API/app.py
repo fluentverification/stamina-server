@@ -11,10 +11,10 @@ import json
 import atexit
 import signal
 
-from settings import Settings, EASTER_EGG
-from Job import Job, stop_all_docker_containers
-from web import *
-from log import *
+from .settings import Settings, EASTER_EGG
+from .Job import Job, stop_all_docker_containers
+from .web import *
+from .log import *
 
 app = Flask(__name__)
 

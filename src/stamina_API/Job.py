@@ -10,13 +10,13 @@ from time import time
 from shutil import rmtree
 import os
 
-from settings import Settings
-from log import log
+from .settings import Settings
+from .log import log
 
 client = docker.from_env()
 
 BASE_IMAGE="ifndefjosh/sstamina:qest23"
-client.images.pull(BASE_IMAGE)
+# client.images.pull(BASE_IMAGE)
 
 SSTAMINA="/opt/stamina-storm/build/sstamina"
 

@@ -1,6 +1,7 @@
 from datetime import datetime
-from settings import Settings
 import sys
+
+from .settings import Settings
 
 logfile = None
 if Settings.LOG_FILE == "":
