@@ -76,7 +76,7 @@ class Job:
 			#mod = create_command_write_file(data["model_file"], "model.prism")
 			#prop = create_command_write_file(data["prop_file"], "properties.csl")
 			#mount = docker.types.Mount(target=in_container_path, source=self.path, read_only=True)
-			self.command = f"timeout {Settings.MAX_ALLOWED_TIME_PER_JOB} {SSTAMINA} {args} {in_container_path}/model.prism {in_container_path}/prop.csl" # f"sstamina {args} model.prism properties.csl"
+			self.command = f"timeout {Settings.MAX_ALLOWED_TIME_PER_JOB} {SSTAMINA} {args} {in_container_path}/model.prism {in_container_path}/prop.csl || echo 'Killed.'" # f"sstamina {args} model.prism properties.csl"
 			if self.create_tra_file:
 				self.command += " -a transitions.tra"
 			#full_command = f"{mod} && {prop} \\\n && cat model.prism"
