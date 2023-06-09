@@ -83,7 +83,7 @@ class Job:
 			#print(f"Full command for docker container:\n{full_command}")
 			self.has_inputs = True
 			self.container = client.containers.run(BASE_IMAGE
-				, self.command
+				, f"/bin/sh -c \"{self.command}\""
 				, detach=True
 				, volumes={path:{'bind':in_container_path, 'mode':'rw'}}
 				, mem_limit=Settings.MAX_ALLOWED_MEMORY
