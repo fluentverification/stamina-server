@@ -35,3 +35,9 @@ Jobs are pruned every so often and time out every few minutes.
 - `/qapla` (easter egg):
 	+ `GET`: Another easter egg 
 -->
+
+## HTTPS via nginx and uwsgi
+
+(Not applicable for Azure)
+
+Wherever this is deployed on the host machine, we will need to use `certbot` to create HTTPS certificates. I have been looking at [this article](https://www.digitalocean.com/community/tutorials/how-to-serve-flask-applications-with-uwsgi-and-nginx-on-ubuntu-22-04) and believe that we will be able to deploy using the methodology presented in this article. We will need to install and set up `nginx` on the machine

@@ -1,28 +1,10 @@
-# from debian:latest
-# 
-# ENV API_HOME=/opt/api
-# 
-# RUN apt-get update && apt-get install -y python3 python3-flask python3-docker
-# RUN mkdir -p $API_HOME
-# 
-# COPY . $API_HOME
-# WORKDIR $API_HOME/src
-# ENV FLASK_APP=$API_HOME/src/app.py
-# RUN env FLASK_APP=$FLASK_APP flask run 
-# 
-# 
-# RUN apk --update add bash
-# ENV STATIC_URL /static
-# ENV STATIC_PATH /var/www/app/static
-# COPY ./requirements.txt /var/www/requirements.txt
-# RUN pip install -r /var/www/requirements.txt
-
-# Run with docker run -v /var/run/docker.sock:/var/run/docker.sock
-
-# FROM tiangolo/uwsgi-nginx-flask:latest
+# Run on debian
 FROM debian:latest
 
+# Serve from /var/www
 ENV API_HOME=/var/www/stamina
+# In order to serve over HTTPS, you will need an OpenSSL certificate
+# This file assumes taht you have certificate files httpcert.crt and httpkey.key
 ENV CRT_FILE=httpcert.crt
 ENV KEY_FILE=httpkey.key
 ENV PORT=8443
