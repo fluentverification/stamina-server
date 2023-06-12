@@ -3,6 +3,20 @@ from .settings import Settings
 o = '{'
 c = '}'
 
+INDEX_CONTENT = """
+<!DOCTYPE html>
+<head>
+	<title>STAMINA API</title>
+	<link rel="stylesheet" href="https://staminachecker.org/styles.css">
+</head>
+<body>
+	<div class="content">
+		<h1>Welcome to the STAMINA API</h1>
+		<p>Please visit <a href=https://staminachecker.org/run>https://staminachecker.org/run</a> in order to create and run a Job.</p>
+	</div>
+</body>
+"""
+
 def create_html_for_response(response, job_status):
 	uid = response["id"]
 	status = response["status"]
