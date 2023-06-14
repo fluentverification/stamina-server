@@ -27,7 +27,7 @@ jobs, ip_to_job, jobs_lock = get_shared_state(HOST, PORT, KEY)
 #jobs = {}
 #ip_to_job = {}
 #jobs_lock = Lock()
-#ip_to_job_lock = Lock()
+###ip_to_job_lock = Lock()
 
 def periodically_clean_jobs():
 	'''
