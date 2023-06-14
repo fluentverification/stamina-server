@@ -186,8 +186,13 @@ def post_jobs():
 		if len(query_result) == 1:
 			log(f"Providing information about {request_data[id_key]} to ip {get_client_ip()}")
 			job_json = {}
-			for k, v in query_result[0].items():
-				job_json[k] = v
+			docker_id = query_result[0]["docker_id"]
+			killed = query_result[0]["killed"]
+			status, logs = get_container_status_logs(docker_id, killed)
+			job_json["status"] = status
+			job_json["logs"] = logs
+			job_json["uid"] = query_result[0]["job_uid"]
+			job_json["name"] = query_result[0]["name"]
 			docker_id = query_result[0]['docker_id']
 			killed = query_result[0]['killed'] == 1
 			status, logs = get_container_status_logs(docker_id, killed)
@@ -376,9 +381,14 @@ Assumes the entire body of the request is the uid
 	log(f"{get_client_ip()} has asked to get information about job {jid}")
 	if jid == "":
 		return "The /checkjob URI takes a plaintext request format and is intended to be used via terminal!", 415
-	if not jid in jobs:
+	conn = get_db_connection()
+	query_result = conn.execute("select docker_id, killed from jobs where job_uid = ?", (jid,)).fetchall()
+	if len(query_result) == 0:
 		return f"The ID {jid} does not exist or is not known!", 415
-	response = Response(jobs[jid].get_logs())
+	docker_id = query_result[0]["docker_id"]
+	killed = query_result[0]["killed"] == 1
+	status, logs = get_container_status_logs(docker_id, killed)
+	response = Response(logs)
 	# TODO: should probably change this to allow only https://staminachecker.org
 	response.headers['Access-Control-Allow-Origin'] = '*'
 	return response
