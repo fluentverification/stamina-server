@@ -20,14 +20,10 @@ from .data import *
 app = Flask(__name__)
 
 # List of all jobs and their associated
-HOST = "0.0.0.0"
-PORT = 443
-KEY = b"secret"
-jobs, ip_to_job, jobs_lock = get_shared_state(HOST, PORT, KEY)
-#jobs = {}
-#ip_to_job = {}
-#jobs_lock = Lock()
-###ip_to_job_lock = Lock()
+def get_db_connection():
+	conn = sqlite3.connect("database.db")
+	conn.row_factory = sqlite3.Row
+	return conn
 
 def periodically_clean_jobs():
 	'''
@@ -38,36 +34,40 @@ The target thread which waits every so often and then cleans up old jobs
 			sleep(Settings.CLEANUP_INTERVAL)
 			clean_jobs()
 	except KeyboardInterrupt:
-		cur_time = int(time())
-		log(f"Removing temp directory")
-		for uid, job in jobs.items():
-			job.kill()
-			job.clean()
+		# TODO
+		pass
+		#cur_time = int(time())
+		#log(f"Removing temp directory")
+		#for uid, job in jobs.items():
+			#job.kill()
+			#job.clean()
 
 def clean_jobs():
 	'''
 Clean up old jobs
 	'''
-	cur_time = int(time())
-	log("Cleaning old jobs:")
-	uids_to_clean = []
-	for uid, job in jobs.items():
-		age = cur_time - job.creation_time
-		if age >= Settings.MAX_ALLOWED_TIME_PER_JOB:
-			job.kill()
-			log(f"Killing job {uid}")
-		if age >= Settings.MAX_JOB_RETENTION_TIME:
-			ip = job.ip
-			job.clean()
-			uids_to_clean.append(uid)
-			# Clean ip_to_job
-			cur_ip_joblist = ip_to_job[ip]
-			cur_ip_joblist.remove(job)
-			log(f"Removing job {uid}")
-			if len(ip_to_job[ip]) == 0:
-				del ip_to_job[ip]
-	for uid in uids_to_clean:
-		del jobs[uid]
+	# TODO
+	#cur_time = int(time())
+	#log("Cleaning old jobs:")
+	#uids_to_clean = []
+	#for uid, job in jobs.items():
+		#age = cur_time - job.creation_time
+		#if age >= Settings.MAX_ALLOWED_TIME_PER_JOB:
+			#job.kill()
+			#log(f"Killing job {uid}")
+		#if age >= Settings.MAX_JOB_RETENTION_TIME:
+			#ip = job.ip
+			#job.clean()
+			#uids_to_clean.append(uid)
+			# # Clean ip_to_job
+			#cur_ip_joblist = ip_to_job[ip]
+			#cur_ip_joblist.remove(job)
+			#log(f"Removing job {uid}")
+			#if len(ip_to_job[ip]) == 0:
+				#del ip_to_job[ip]
+	#for uid in uids_to_clean:
+		#del jobs[uid]
+	pass
 
 def get_client_ip():
 	# Get the IP if not behind a proxy
@@ -84,38 +84,55 @@ def check_request(request, required_fields):
 		if not field in request_json:
 			return False, {"error": f"Field \'{field}\' is required!"}, 400
 		
+def get_number_jobs(ip = None, conn=None):
+	# If IP address is none, we get the total count of jobs on the server
+	if conn is None:
+		conn = get_db_connection()
+	if ip is None:
+		count = conn.execute("select count(*) as cnt from jobs;").fetchall()[0]['cnt']
+		return count
+	else:
+		count = conn.execute(
+			"select count(*) as cnt from jobs where ip = (?)"
+			, (ip)
+		).fetchall()[0]['cnt']
+		
 def create_job(job_id, job_data=None, model_provided=False, prop_provided=False, path="", job_name=None):
-	#jobs_lock.acquire()
-	if len(jobs) > Settings.MAX_ALLOWED_JOBS:
-		#jobs_lock.release()
+	conn = get_db_connection()
+	if get_number_jobs(conn=conn) > Settings.MAX_ALLOWED_JOBS:
 		return f"Refused: too many total jobs running on server", 503
 	ip = get_client_ip()
 	job = None
-	if ip in ip_to_job and len(ip_to_job[ip]) >= Settings.MAX_REQUESTS_PER_IP:
-		#jobs_lock.release()
+	if get_number_jobs(ip, conn=conn) >= Settings.MAX_REQUESTS_PER_IP:
 		log(f"Refusing to create job for IP Address {ip}: They have too many active jobs")
 		return f"Refused: Too many jobs for IP address {ip}", 429
-	elif ip in ip_to_job:
-		job = Job(job_data, job_id, model_provided, prop_provided, path, ip)
-		# With this BaseManager we have to edit a copy and reassign
-		our_joblist = ip_to_job[ip].copy() 
-		our_joblist.append(job)
-		ip_to_job[ip] = our_joblist
-		jobs[job_id] = job
-		if job_name is not None:
-			job.set_name(job_name)
-	else:
-		job = Job(job_data, job_id, model_provided, prop_provided, path, ip)
-		ip_to_job[ip] = [job]
-		jobs[job_id] = job
-		if job_name is not None:
-			job.set_name(job_name)
+	job = Job(job_data, job_id, model_provided, prop_provided, path, ip)
+	if job_name is not None:
+		job.set_name(job_name)
+	# Create entry in the database
+	conn.execute("""
+insert into jobs (
+	job_uid
+	, docker_id
+	, killed
+	, kappa
+	, rkappa
+	, window
+	, name
+) values (?, ?, ?, ?, ?, ?, ?)"""
+	, (
+		job.uid
+		, job.container.id
+		, job.killed
+		, job.kappa
+		, job.rkappa
+		, job.window
+		, job.name
+	))
 	log(f"Creating job with id {job_id} for IP address {ip}")
 	if job.has_inputs:
-		#jobs_lock.release()
 		return "Created", 201
 	else:
-		#jobs_lock.release()
 		return "No input", 400
 
 def authenticate(uname, passwd):
@@ -142,7 +159,6 @@ def after_request(response):
 # When we upgrade flask version we can just use @app.post
 @app.route("/jobs", methods=["POST"])
 def post_jobs():
-	#jobs_lock.acquire()
 	content_type = request.headers.get("Content-Type")
 	# Handle both multipart data (as we would get from a web form,
 	# as well as a purely JSON object, in case the API wishes to encode the PRISM
@@ -170,7 +186,6 @@ def post_jobs():
 	create_key = "create"
 	# print(request_data)
 	if create_key in request_data: # and request_data[create_key].lower() == "true":
-		# print("We wish to create a job")
 		# Create a job ID
 		job_id = get_random_id()
 		# Get the model file
