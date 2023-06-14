@@ -15,12 +15,19 @@ from .settings import Settings, EASTER_EGG
 from .Job import Job, stop_all_docker_containers
 from .web import *
 from .log import *
+from .data import *
 
 app = Flask(__name__)
 
 # List of all jobs and their associated
-jobs = {}
-ip_to_job = {}
+HOST = "0.0.0.0"
+PORT = 443
+KEY = b"secret"
+jobs, ip_to_job, jobs_lock = get_shared_state(HOST, PORT, KEY)
+#jobs = {}
+#ip_to_job = {}
+#jobs_lock = Lock()
+#ip_to_job_lock = Lock()
 
 def periodically_clean_jobs():
 	'''
@@ -90,7 +97,10 @@ def create_job(job_id, job_data=None, model_provided=False, prop_provided=False,
 		return f"Refused: Too many jobs for IP address {ip}", 429
 	elif ip in ip_to_job:
 		job = Job(job_data, job_id, model_provided, prop_provided, path, ip)
-		ip_to_job[ip].append(job)
+		# With this BaseManager we have to edit a copy and reassign
+		our_joblist = ip_to_job[ip].copy() 
+		our_joblist.append(job)
+		ip_to_job[ip] = our_joblist
 		jobs[job_id] = job
 		if job_name is not None:
 			job.set_name(job_name)
