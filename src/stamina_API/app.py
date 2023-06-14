@@ -144,8 +144,6 @@ This method will eventually allow administrators (such as us) access
 
 def get_random_id():
 	secret = secrets.token_urlsafe(16)
-	while secret in jobs:
-		secret = secrets.token_urlsafe(16)
 	return secret
 
 @app.after_request
@@ -168,6 +166,7 @@ def post_jobs():
 		has_json = True
 	elif "multipart/form-data" not in content_type and "application/x-www-form-urlencoded" not in content_type:
 		return f"Request not supported! (Requires either 'multipart/form-data', 'application/x-www-form-urlencoded', or 'application/json'; got {content_type})", 415
+	conn = get_db_connection()
 	# check to see if there is a job ID
 	request_data = None
 	if has_json:
@@ -176,13 +175,23 @@ def post_jobs():
 		request_data = request.form
 	id_key = "id"
 	if id_key in request_data:
-		if request_data[id_key] in jobs:
+		query_result = conn.execute("select * from jobs where job_uid = ?", (request_data[id_key])).fetchall()
+		if len(query_result) == 1:
 			log(f"Providing information about {request_data[id_key]} to ip {get_client_ip()}")
-			#jobs_lock.release()
-			return jobs[request_data[id_key]].__json__()
-		else:
-			#jobs_lock.release()
+			job_json = {}
+			for k, v in query_result[0].items():
+				job_json[k] = v
+			docker_id = query_result[0]['docker_id']
+			killed = query_result[0]['killed'] == 1
+			status, logs = get_container_status_logs(docker_id, killed)
+			job_json["status"] = status
+			job_json["logs"] = logs
+			return job_json
+		elif len(query_result) == 0:
 			return {"error": f"Job with id {request_data['id']} does not exist"}, 404
+		else:
+			log(f"The query result should have exactly one entry! Instead it has {len(query_result)} entries (uid {request_data[id_key]}")
+			return {"error", f"Internal server error. Please report this to Josh."}, 500
 	create_key = "create"
 	# print(request_data)
 	if create_key in request_data: # and request_data[create_key].lower() == "true":
@@ -234,7 +243,7 @@ def post_jobs():
 	authenticated = authenticate(request_data["username"], request_data["password"])
 	if authenticated:
 		#jobs_lock.release()
-		return jsonify(jobs)
+		return {"error": "Not implemented"}, 500
 	else:
 		#jobs_lock.release()
 		return {"error": "Authentication failure"}, 401
