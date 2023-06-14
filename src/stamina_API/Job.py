@@ -65,12 +65,14 @@ def stop_all_docker_containers():
 		log("done")
 	client.containers.prune()
 
-def clean_from_id(docker_id):
+def clean_from_id(docker_id, jid):
 	'''
 Cleans a container with ID given
 	'''
 	container = client.get(docker_id)
 	container.stop()
+	client.containers.remove(container)
+	rmtree(os.path.join(Settings.TMP_DIRECTORY_LOCATION, jid)
 
 class Job:
 	def __init__(self, data, uid, model_provided=True, prop_provided=True, path="", ip=None, in_container_path="/tmp/", create_tra_file=False):

@@ -282,14 +282,16 @@ def delete_all_my_jobs():
 	if get_number_jobs(ip, conn) == 0:
 		#jobs_lock.release()
 		return {"error": "This IP has no active jobs"}, 400
-	
-	jobs_to_delete_count = len(ip_to_job[ip])
-	for job in ip_to_job[ip]:
-		job.kill()
-		pass
-	ip_to_job.remove(ip)
+	query_result = conn.execute("select docker_id, job_uid from jobs where ip = ?", (ip)).fetchall()
+	jobs_to_delete_count = len(query_result)
+	for row in query_result:
+		docker_id = row["docker_id"]
+		jid = job["job_uid"]
+		clean_from_id(docker_id, jid)
+	conn.execute("delete from jobs where ip = ?", (ip))
+	# TODO: add the jobs to deleted_jobs table
 	#jobs_lock.release()
-	return {"message": f"Success! Deleted all jobs!" }
+	return {"message": f"Success! Deleted all {jobs_to_delete_count} jobs!" }
 
 @app.route("/jobs", methods=["DELETE"])
 def delete_job():
