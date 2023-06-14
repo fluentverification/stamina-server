@@ -1,11 +1,12 @@
 drop table if exists jobs;
+drop table if exists deleted_jobs;
 
 -- Jobs still 
 create table jobs (
 	-- Use an auto-incrementing integer as the primary key
 	id integer primary key autoincrement
-	, job_uid text primary key
-	, docker_id text primary key
+	, job_uid text key
+	, docker_id text key
 	-- Keep the timestamp when this was created.
 	, created timestamp not null default current_timestamp
 	-- this is actually a boolean. SQLite does not support boolean
@@ -24,7 +25,7 @@ create table jobs (
 -- or anything of the sort
 create table deleted_jobs (
 	id integer primary key autoincrement
-	, job_uid text primary key
+	, job_uid text key
 	-- timestamps of when they were started vs deleted
 	, created timestamp not null
 	, deleted timestamp not null default current_timestamp

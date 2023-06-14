@@ -10,12 +10,14 @@ from shutil import rmtree
 import json
 import atexit
 import signal
+import sqlite3
 
 from .settings import Settings, EASTER_EGG
-from .Job import Job, stop_all_docker_containers
+from .Job import Job, stop_all_docker_containers, get_container_status_logs
 from .web import *
 from .log import *
 from .data import *
+from .init_db import *
 
 app = Flask(__name__)
 
@@ -89,13 +91,14 @@ def get_number_jobs(ip = None, conn=None):
 	if conn is None:
 		conn = get_db_connection()
 	if ip is None:
-		count = conn.execute("select count(*) as cnt from jobs;").fetchall()[0]['cnt']
+		count = conn.execute("select count(*) as cnt from jobs").fetchall()[0]['cnt']
 		return count
 	else:
 		count = conn.execute(
 			"select count(*) as cnt from jobs where ip = (?)"
-			, (ip)
+			, (ip,)
 		).fetchall()[0]['cnt']
+		return count
 		
 def create_job(job_id, job_data=None, model_provided=False, prop_provided=False, path="", job_name=None):
 	conn = get_db_connection()
@@ -130,8 +133,10 @@ insert into jobs (
 		, job.window
 		, job.name
 		, ip
+		,
 	))
 	log(f"Creating job with id {job_id} for IP address {ip}")
+	conn.commit()
 	if job.has_inputs:
 		return "Created", 201
 	else:
@@ -177,7 +182,7 @@ def post_jobs():
 		request_data = request.form
 	id_key = "id"
 	if id_key in request_data:
-		query_result = conn.execute("select * from jobs where job_uid = ?", (request_data[id_key])).fetchall()
+		query_result = conn.execute("select * from jobs where job_uid = ?", (request_data[id_key], )).fetchall()
 		if len(query_result) == 1:
 			log(f"Providing information about {request_data[id_key]} to ip {get_client_ip()}")
 			job_json = {}
@@ -257,10 +262,11 @@ def get_my_jobs():
 	ip = get_client_ip()
 	log(f"{ip} has asked for their active jobs")
 	conn = get_db_connection()
-	if get_number_jobs(ip, conn) == 0:
-		return {"error": f"This IP ({ip}) has no active jobs"}, 400
 	my_jobs = []
-	query_result = conn.execute("select * from jobs where ip = ?", (ip)).fetchall()
+	query_result = conn.execute("select * from jobs where ip = ?", (ip,)).fetchall()
+	#print(len(query_result))
+	if len(query_result) == 0:
+		return {"error": f"This IP ({ip}) has no active jobs"}, 400
 	for job in query_result:
 		job_json = {}
 		docker_id = job["docker_id"]
@@ -268,9 +274,12 @@ def get_my_jobs():
 		status, logs = get_container_status_logs(docker_id, killed)
 		job_json["status"] = status
 		job_json["logs"] = logs
-		for k, v in job.item():
-			job_json[k] = v
+		job_json["uid"] = job["job_uid"]
+		job_json["name"] = job["name"]
+		#for k, v in job.items():
+			#job_json[k] = v
 		my_jobs.append(job_json)
+	conn.commit()
 	return jsonify(my_jobs)
 
 @app.route("/myjobs", methods=["DELETE"])
@@ -282,13 +291,14 @@ def delete_all_my_jobs():
 	if get_number_jobs(ip, conn) == 0:
 		#jobs_lock.release()
 		return {"error": "This IP has no active jobs"}, 400
-	query_result = conn.execute("select docker_id, job_uid from jobs where ip = ?", (ip)).fetchall()
+	query_result = conn.execute("select docker_id, job_uid from jobs where ip = ?", (ip,)).fetchall()
 	jobs_to_delete_count = len(query_result)
 	for row in query_result:
 		docker_id = row["docker_id"]
 		jid = row["job_uid"]
 		clean_from_id(docker_id, jid)
-	conn.execute("delete from jobs where ip = ?", (ip))
+	conn.execute("delete from jobs where ip = ?", (ip,))
+	conn.commit()
 	# TODO: add the jobs to deleted_jobs table
 	#jobs_lock.release()
 	return {"message": f"Success! Deleted all {jobs_to_delete_count} jobs!" }
@@ -300,18 +310,19 @@ def delete_job():
 	log(f"{ip} has asked to DELETE job with ID '{jid}'")
 	conn = get_db_connection()
 	# Get the container ID first
-	query_result = conn.execute("select docker_id from jobs where job_uid = ?", (jid))
+	query_result = conn.execute("select docker_id from jobs where job_uid = ?", (jid,))
 	if len(query_result) == 0:
 		log("(it does not exist)")
 		return f"Job '{jid}' does not exist", 400
 	# At this point we can assume it exists
-	else if len(query_result) > 1:
+	elif len(query_result) > 1:
 		log(f"In delete_job() expected query result to have length 1 but has: {len(query_result)}")
 		return "Internal server error.", 500
 	# Get the container and kill it
 	docker_id = query_result[0]["docker_id"]
 	clean_from_id(docker_id, jid)
-	conn.execute("delete from jobs where job_uid = ?", (jid))
+	conn.execute("delete from jobs where job_uid = ?", (jid,))
+	conn.commit()
 	return "Success"
 
 @app.route("/rename", methods=["POST"])
