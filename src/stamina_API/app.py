@@ -242,10 +242,8 @@ def post_jobs():
 	check_request(request, ["username", "password"])
 	authenticated = authenticate(request_data["username"], request_data["password"])
 	if authenticated:
-		#jobs_lock.release()
 		return {"error": "Not implemented"}, 500
 	else:
-		#jobs_lock.release()
 		return {"error": "Authentication failure"}, 401
 
 @app.route("/jobs", methods=["GET"])
@@ -254,16 +252,23 @@ def get_jobs():
 
 @app.route("/myjobs", methods=["GET"])
 def get_my_jobs():
-	#jobs_lock.acquire()
 	ip = get_client_ip()
 	log(f"{ip} has asked for their active jobs")
-	if not ip in ip_to_job:
-		#jobs_lock.release()
+	conn = get_db_connection()
+	if get_number_jobs(ip, conn) == 0:
 		return {"error": f"This IP ({ip}) has no active jobs"}, 400
 	my_jobs = []
-	for job in ip_to_job[ip]:
-		my_jobs.append(job.__json__())
-	#jobs_lock.release()
+	query_result = conn.execute("select * from jobs where ip = ?", (ip)).fetchall()
+	for job in query_result:
+		job_json = {}
+		docker_id = job["docker_id"]
+		killed = job["killed"]
+		status, logs = get_container_status_logs(docker_id, killed)
+		job_json["status"] = status
+		job_json["logs"] = logs
+		for k, v in job.item():
+			job_json[k] = v
+		my_jobs.append(job_json)
 	return jsonify(my_jobs)
 
 @app.route("/myjobs", methods=["DELETE"])
