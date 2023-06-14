@@ -286,7 +286,7 @@ def delete_all_my_jobs():
 	jobs_to_delete_count = len(query_result)
 	for row in query_result:
 		docker_id = row["docker_id"]
-		jid = job["job_uid"]
+		jid = row["job_uid"]
 		clean_from_id(docker_id, jid)
 	conn.execute("delete from jobs where ip = ?", (ip))
 	# TODO: add the jobs to deleted_jobs table
@@ -300,7 +300,7 @@ def delete_job():
 	log(f"{ip} has asked to DELETE job with ID '{jid}'")
 	conn = get_db_connection()
 	# Get the container ID first
-	query_result = conn.execute("select docker_id from jobs where ip = ?", (ip))
+	query_result = conn.execute("select docker_id from jobs where job_uid = ?", (jid))
 	if len(query_result) == 0:
 		log("(it does not exist)")
 		return f"Job '{jid}' does not exist", 400
@@ -309,6 +309,9 @@ def delete_job():
 		log(f"In delete_job() expected query result to have length 1 but has: {len(query_result)}")
 		return "Internal server error.", 500
 	# Get the container and kill it
+	docker_id = query_result[0]["docker_id"]
+	clean_from_id(docker_id, jid)
+	conn.execute("delete from jobs where job_uid = ?", (jid))
 	return "Success"
 
 @app.route("/rename", methods=["POST"])
