@@ -1,5 +1,6 @@
 drop table if exists jobs;
 
+-- Jobs still 
 create table jobs (
 	-- Use an auto-incrementing integer as the primary key
 	id integer primary key autoincrement
@@ -14,7 +15,21 @@ create table jobs (
 	, rkappa real not null
 	, window real not null
 	-- Container information
-	, name text 
+	, name text not null
 	-- User information
-	, ip text
+	, ip text not null
+);
+
+-- Jobs which have been deleted no longer need information about logs or container information
+-- or anything of the sort
+create table deleted_jobs (
+	id integer primary key autoincrement
+	, job_uid text primary key
+	-- timestamps of when they were started vs deleted
+	, created timestamp not null
+	, deleted timestamp not null default current_timestamp
+	-- Container information
+	, name text not null
+	-- User information
+	, ip text not null
 );

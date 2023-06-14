@@ -119,7 +119,8 @@ insert into jobs (
 	, rkappa
 	, window
 	, name
-) values (?, ?, ?, ?, ?, ?, ?)"""
+	, ip
+) values (?, ?, ?, ?, ?, ?, ?, ?)"""
 	, (
 		job.uid
 		, job.container.id
@@ -128,6 +129,7 @@ insert into jobs (
 		, job.rkappa
 		, job.window
 		, job.name
+		, ip
 	))
 	log(f"Creating job with id {job_id} for IP address {ip}")
 	if job.has_inputs:
@@ -276,31 +278,35 @@ def delete_all_my_jobs():
 	#jobs_lock.acquire()
 	ip = get_client_ip()
 	log(f"{ip} has asked to DELETE all their active jobs")
-	if not ip in ip_to_job:
+	conn = get_db_connection()
+	if get_number_jobs(ip, conn) == 0:
 		#jobs_lock.release()
 		return {"error": "This IP has no active jobs"}, 400
+	
 	jobs_to_delete_count = len(ip_to_job[ip])
 	for job in ip_to_job[ip]:
 		job.kill()
 		pass
 	ip_to_job.remove(ip)
 	#jobs_lock.release()
-	return {"message": f"Success! Deleted {jobs_to_delete_count} jobs!" }
+	return {"message": f"Success! Deleted all jobs!" }
 
 @app.route("/jobs", methods=["DELETE"])
 def delete_job():
 	jid = request.get_data().decode("utf-8")
 	ip = get_client_ip()
 	log(f"{ip} has asked to DELETE job with ID '{jid}'")
-	if not jid in jobs:
+	conn = get_db_connection()
+	# Get the container ID first
+	query_result = conn.execute("select docker_id from jobs where ip = ?", (ip))
+	if len(query_result) == 0:
 		log("(it does not exist)")
-		return "Job does not exist", 400
-	j = jobs[jid]
-	del jobs[jid]
-	if j in ip_to_job[ip]:
-		ip_to_job[ip].remove(j)
-	if len(ip_to_job[ip]) == 0:
-		del ip_to_job[ip]
+		return f"Job '{jid}' does not exist", 400
+	# At this point we can assume it exists
+	else if len(query_result) > 1:
+		log(f"In delete_job() expected query result to have length 1 but has: {len(query_result)}")
+		return "Internal server error.", 500
+	# Get the container and kill it
 	return "Success"
 
 @app.route("/rename", methods=["POST"])
