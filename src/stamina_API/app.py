@@ -27,6 +27,7 @@ def get_db_connection():
 	conn.row_factory = sqlite3.Row
 	return conn
 
+
 def periodically_clean_jobs():
 	'''
 The target thread which waits every so often and then cleans up old jobs
@@ -160,6 +161,9 @@ def after_request(response):
 	header['Access-Control-Allow-Methods'] = '*'
 	return response
 
+@app.route("/")
+def get_index():
+	return INDEX_CONTENT
 
 # When we upgrade flask version we can just use @app.post
 @app.route("/jobs", methods=["POST"])
