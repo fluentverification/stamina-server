@@ -74,6 +74,10 @@ Cleans a container with ID given
 	client.containers.remove(container)
 	rmtree(os.path.join(Settings.TMP_DIRECTORY_LOCATION, jid))
 
+def kill_from_id(docker_id):
+	container = client.containers.get(docker_id)
+	container.stop()
+
 class Job:
 	def __init__(self, data, uid, model_provided=True, prop_provided=True, path="", ip=None, in_container_path="/tmp/", create_tra_file=False):
 		'''

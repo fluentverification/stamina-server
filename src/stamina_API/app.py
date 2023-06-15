@@ -13,7 +13,7 @@ import signal
 import sqlite3
 
 from .settings import Settings, EASTER_EGG
-from .Job import Job, stop_all_docker_containers, get_container_status_logs
+from .Job import Job, stop_all_docker_containers, get_container_status_logs, kill_from_id
 from .web import *
 from .log import *
 from .data import *
@@ -315,7 +315,7 @@ def delete_job():
 	log(f"{ip} has asked to DELETE job with ID '{jid}'")
 	conn = get_db_connection()
 	# Get the container ID first
-	query_result = conn.execute("select docker_id from jobs where job_uid = ?", (jid,))
+	query_result = conn.execute("select docker_id from jobs where job_uid = ?", (jid,)).fetchall()
 	if len(query_result) == 0:
 		log("(it does not exist)")
 		return f"Job '{jid}' does not exist", 400
@@ -346,9 +346,12 @@ def rename_job():
 	jid = request_json["id"]
 	name = request_json["name"]
 	log(f"{get_client_ip()} wishes to rename job {jid} to name \"{name}\"")
-	if not jid in jobs:
+	conn = get_db_connection()
+	query_result = conn.execute("select name from jobs where job_uid = ?", (jid,)).fetchall()
+	if len(query_result) == 0:
 		return {"error": f"Job ID {jid} cannot be renamed! It does not exist!"}, 400
-	jobs[jid].set_name(name)
+	conn.execute("update jobs set name = ? where job_uid = ?", (name, jid,))
+	conn.commit()
 	return {"success": f"Successfully renamed job {jid} to {name}"}, 200
 
 @app.route("/about", methods=["GET"])
@@ -399,12 +402,19 @@ def kill():
 kills a job
 	'''
 	jid = request.get_data().decode("utf-8")
+	conn = get_db_connection()
 	log(f"{get_client_ip()} has asked to kill job {jid}")
 	if jid == "":
 		return "The /kill URI takes a plaintext request format and is intended to be used via terminal!", 415
-	if not jid in jobs:
+	query_result = conn.execute("select docker_id, killed from jobs where job_uid = ?", (jid,)).fetchall()
+	if len(query_result) == 0:
 		return f"The ID {jid} does not exist or is not known!", 415
-	jobs[jid].kill()
+	docker_id = query_result[0]["docker_id"]
+	killed = query_result[0]["killed"] == 1
+	if killed:
+		return "Job was already killed", 200
+	kill_from_id(docker_id)
+	conn.execute("update jobs set killed = 1 where job_uid = ?", (jid,))
 	return "Success", 200
 	#del jobs[jid]
 
