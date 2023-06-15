@@ -1,0 +1,7 @@
+__pycache__
+api_data
+logs.txt
+*.egg-info
+*.whl
+*.tar.gz
+database.db
