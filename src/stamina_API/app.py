@@ -209,14 +209,26 @@ def post_jobs():
 	if create_key in request_data: # and request_data[create_key].lower() == "true":
 		# Create a job ID
 		job_id = get_random_id()
+		#print(request.files["model_file"].content_length)
 		# Get the model file
-		model_provided = ("model_file" in request_data and has_json) or ("model_file" in request.files)
+		model_provided = ("model_file" in request_data and has_json) or ("model_file" in request.files) # and request.files["model_file"].content_length > 0)
+		#print(request.files["model_file"].content_length)
 		# Get the properties file
-		prop_provided = ("prop_file" in request_data and has_json) or ("prop_file" in request.files)
+		prop_provided = ("prop_file" in request_data and has_json) or ("prop_file" in request.files) # and request.files["prop_file"].content_length > 0)
 		# Only create temporary directory if both files provided
 		path = ""
-		job_name = None
 		if model_provided and prop_provided:
+			model_file = request.files["model_file"]
+			prop_file = request.files["prop_file"]
+			# Check the sizes of each file 
+			model_size = model_file.seek(0, os.SEEK_END)
+			prop_size = prop_file.seek(0, os.SEEK_END)
+			if model_size == 0 or prop_size == 0:
+				return create_html_err(f"Both a model and properties file are required. <b>BOTH ARE REQUIRED TO BE NON-EMPTY</b><br><br><b>Model Provided:</b> {model_size != 0}<br><b>Property Provided:</b> {prop_size != 0}<br><br>Try uploading a valid model and properties file."
+						  , False
+						  , after_error_msg = f"<br><h2>Your request:</h2> {json_to_table(request_data)}")
+			print(model_size)
+			print(prop_size)
 			# Create a temporary path
 			path = f"{Settings.TMP_DIRECTORY_LOCATION}/{job_id}/"
 			if not os.path.isdir(path):
@@ -227,14 +239,18 @@ def post_jobs():
 				with open(os.path.join(path, "prop.csl"), "w") as p:
 					p.write(request_data["prop_file"])
 			else:
-				# print("Saving files")
-				request.files["model_file"].save(os.path.join(path, "model.prism"))
-				request.files["prop_file"].save(os.path.join(path, "prop.csl"))
-				#job_name = f"{request.files['model_file'].name} / {request.files['prop_file'].name}"
+				model_file.seek(0, os.SEEK_SET)
+				prop_file.seek(0, os.SEEK_SET)
+				model_file.save(os.path.join(path, "model.prism"))
+				prop_file.save(os.path.join(path, "prop.csl"))
+		elif "from_web" in request_data:
+			return create_html_err(f"Both a model and properties file are required.<br><br><b>Model Provided:</b> {model_provided}<br><b>Property Provided:</b> {prop_provided}<br><br>Try uploading a valid model and properties file."
+						  , False
+						  , after_error_msg = f"<br><h2>Your request:</h2> {json_to_table(request_data)}")
 		# Create a job and run it
 		response = {}
 		response["id"] = job_id
-		job_status, job_status_code = create_job(job_id, request_data, model_provided, prop_provided, path, job_name)
+		job_status, job_status_code = create_job(job_id, request_data, model_provided, prop_provided, path)
 		response["status"] = job_status
 		#jobs_lock.release()
 		if not "from_web" in request_data:
