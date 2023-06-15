@@ -3,7 +3,13 @@ from .settings import Settings
 o = '{'
 c = '}'
 
-INDEX_CONTENT = """
+footer = """
+<div class=footer>
+	<div id="slogo"><b>STAMINA</b></div> is provided as a free service and funded via NSF Grants 1856733, 1856740, and 1900542
+</div>
+"""
+
+INDEX_CONTENT = f"""
 <!DOCTYPE html>
 <head>
 	<title>STAMINA API</title>
@@ -14,13 +20,8 @@ INDEX_CONTENT = """
 		<h1>Welcome to the STAMINA API</h1>
 		<p>Please visit <a href=https://staminachecker.org/run>https://staminachecker.org/run</a> in order to create and run a Job.</p>
 	</div>
+	{footer}
 </body>
-"""
-
-footer = """
-<div class=footer>
-	<div id="slogo"><b>STAMINA</b></div> is provided as a free service and funded via NSF Grants 1856733, 1856740, and 1900542
-</div>
 """
 
 def create_html_for_response(response, job_status):

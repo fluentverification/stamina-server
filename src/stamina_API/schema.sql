@@ -1,5 +1,6 @@
 drop table if exists jobs;
 drop table if exists deleted_jobs;
+drop table if exists users;
 
 -- Jobs still 
 create table jobs (
@@ -33,4 +34,14 @@ create table deleted_jobs (
 	, name text not null
 	-- User information
 	, ip text not null
+);
+
+-- Users with special priviledges, such as admin
+create table users (
+	id integer primary key autoincrement
+	, created timestamp not null default current_timestamp
+	, username text key not null
+	, passwd text not null
+	-- priviledges for users
+	, admin integer not null default 0
 );
