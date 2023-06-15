@@ -17,7 +17,8 @@ from .Job import Job, stop_all_docker_containers, get_container_status_logs, kil
 from .web import *
 from .log import *
 from .data import *
-from .init_db import *
+#from .init_db import *
+from .admin import check_password
 
 app = Flask(__name__)
 
@@ -145,10 +146,15 @@ insert into jobs (
 
 def authenticate(uname, passwd):
 	'''
-This method will eventually allow administrators (such as us) access
+Allows administrators to access things. Only returns true if user exists and is administrator
 	'''
-	# This will be a TODO
-	return False
+	conn = get_db_connection()
+	query_result = conn.execute("select passwd, admin from users where username = ?", (uname,))
+	if len(query_result) == 0:
+		return False
+	hashed_pw = query_result[0]["passwd"]
+	admin = query_result[0]["admin"] == 1
+	return admin and check_password(passwd, hashed_pw)
 
 def get_random_id():
 	secret = secrets.token_urlsafe(16)
@@ -350,6 +356,10 @@ def delete_job():
 	conn.commit()
 	return "Success"
 
+@app.route("/admin", methods=["POST"])
+def admin():
+	return "Not implemented", 500
+
 @app.route("/rename", methods=["POST"])
 def rename_job():
 	content_type = request.headers.get("Content-Type")
@@ -437,10 +447,14 @@ kills a job
 	conn.execute("update jobs set killed = 1 where job_uid = ?", (jid,))
 	return "Success", 200
 	#del jobs[jid]
+	
+@app.route("/login", methods=["GET"])
+def login_page():
+	return LOGIN_CONTENT
 
 #Create cleaning thread
-t = Thread(target=periodically_clean_jobs)
-t.start()
+#t = Thread(target=periodically_clean_jobs)
+#t.start()
 
 def exit_handler(signum, frame):
 	'''

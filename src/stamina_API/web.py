@@ -19,8 +19,41 @@ INDEX_CONTENT = f"""
 	<div class="content">
 		<h1>Welcome to the STAMINA API</h1>
 		<p>Please visit <a href=https://staminachecker.org/run>https://staminachecker.org/run</a> in order to create and run a Job.</p>
+		<p>If you are looking for the admin page, please go <a href="/login">sign in.</a></p>
 	</div>
 	{footer}
+</body>
+"""
+
+LOGIN_CONTENT = """
+<!DOCTYPE html>
+<head>
+	<title>STAMINA API</title>
+	<link rel="stylesheet" href="https://staminachecker.org/styles.css">
+</head>
+<body>
+	<div class="content">
+		<h1>Log into the admin page</h1>
+		<form method="POST" action="/admin" enctype="multipart/form-data">
+			<label for="username">Username</label>
+			<input type="text" name="username" />
+			<label for="password">Password</label>
+			<input type="password" name="password"/>
+			<a href="#" onclick="alertLogin()">Forgot your username or password?</a><br>
+			<input type="submit" value="Log In"/>
+		</form>
+	</div>
+	<script>
+function alertLogin() {
+	alert("Cannot reset via web interface. Ask Josh to reset your password manually.");
+}
+	</script>
+	<div class=footer>
+		<div id="slogo"><b>STAMINA</b></div> is provided as a free service and funded via NSF Grants 1856733, 1856740, and 1900542
+	</div>
+	<script>
+	refreshApiUrl();
+	</script>
 </body>
 """
 
@@ -102,3 +135,25 @@ def json_to_table(json):
 	for k, v in json.items():
 		html += f"<tr><td>{k}</td><td>{v}</td></td>"
 	return html + "</table>"
+
+def md_list_to_table(lst, first_row_header = True):
+	if len(lst) == 0:
+		return "<div>Empty Table</div>"
+	html = "<table class=table>"
+	rng = None
+	if first_row_header:
+		rng = range(1, len(lst))
+		html += "<th>"
+		for item in lst[0]:
+			html += f"<td>{item}</td>"
+		html += "</th>"
+	else:
+		rng = range(len(lst))
+		for i in rng:
+			row = lst[i]
+			html += "<tr>"
+			for item in row:
+				html += f"<td>{item}</td>"
+			html += "</tr>"	
+	return html + "</table>"
+	
