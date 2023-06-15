@@ -7,7 +7,7 @@ ENV API_HOME=/var/www/stamina
 # This file assumes taht you have certificate files httpcert.crt and httpkey.key
 ENV CRT_FILE=httpcert.crt
 ENV KEY_FILE=httpkey.key
-ENV PORT=8443
+ENV PORT=443
 
 RUN mkdir -p $API_HOME
 COPY . $API_HOME

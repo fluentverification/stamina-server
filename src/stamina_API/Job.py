@@ -26,6 +26,20 @@ METHOD_FLAGS = {
 	, "priority": "-P"
 }
 
+def get_container_status_logs(docker_id, killed=False):
+	'''
+Returns a tuple with (status, logs) for a particular container. Killed comes from the database
+	'''
+	container = client.containers.get(docker_id)
+	container.reload()
+	status = container.status
+	logs = container.logs().decode("utf-8")
+	# If killed, show an extra line in the logs indicating such
+	if killed or status == "killed":
+		return ("killed", f"{logs}\nKilled.")
+	else:
+		return (status, logs)
+
 def check_float(string):
 	try:
 		float(string)
@@ -50,6 +64,19 @@ def stop_all_docker_containers():
 		container.stop()
 		log("done")
 	client.containers.prune()
+
+def clean_from_id(docker_id, jid):
+	'''
+Cleans a container with ID given
+	'''
+	container = client.containers.get(docker_id)
+	container.stop()
+	client.containers.remove(container)
+	rmtree(os.path.join(Settings.TMP_DIRECTORY_LOCATION, jid))
+
+def kill_from_id(docker_id):
+	container = client.containers.get(docker_id)
+	container.stop()
 
 class Job:
 	def __init__(self, data, uid, model_provided=True, prop_provided=True, path="", ip=None, in_container_path="/tmp/", create_tra_file=False):
