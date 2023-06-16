@@ -13,7 +13,7 @@ import signal
 import sqlite3
 
 from .settings import Settings, EASTER_EGG
-from .Job import Job, stop_all_docker_containers, get_container_status_logs, kill_from_id, clean_from_id
+from .Job import Job, stop_all_docker_containers, get_container_status_logs, kill_from_id, clean_from_id, get_just_status
 from .web import *
 from .log import *
 from .data import *
@@ -388,19 +388,22 @@ def admin():
 	if len(query_result) == 0:
 		content += "<p>No active jobs</p>"
 	else:
-		table = [["UID", "Docker ID", "Name", "Created", "Owner", "Actions", "&kappa;", "r<sub>&kappa;</sub>", "w"]]
+		table = [["UID", "Docker ID", "Name", "Created", "Owner", "Status", "Actions", "&kappa;", "r<sub>&kappa;</sub>", "w"]]
 		for row in query_result:
 			uid = row["job_uid"]
+			docker_id = row["docker_id"]
 			killed = row["killed"]
-			killed_content = "Killed" if killed else f"<a onclick=kill('{uid}')>Kill</a>"
-			killed_content += f"&nbsp;<a onclick=deleteJob('{uid}')>Delete</a>"
+			status = get_just_status(docker_id)
+			actions = "" if killed or status == "exited" or status == "pruned" else f"<a onclick=kill('{uid}')>Kill</a>"
+			actions += f"&nbsp;<a onclick=deleteJob('{uid}')>Delete</a>"
 			table.append([
 				uid
-				, f"{row['docker_id'][0:5]}..."
+				, f"{docker_id[0:5]}..."
 				, row["name"]
 				, row["created"]
 				, row["ip"]
-				, killed_content
+				, "Killed" if killed else status
+				, actions
 				, row["kappa"]
 				, row["rkappa"]
 				, row["window"]

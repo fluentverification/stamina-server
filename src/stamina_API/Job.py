@@ -26,20 +26,31 @@ METHOD_FLAGS = {
 	, "priority": "-P"
 }
 
+def get_just_status(docker_id):
+	try:
+		container = client.containers.get(docker_id)
+		container.reload()
+		status = container.status
+		return status
+	except docker.errors.NotFound as e:
+		return "pruned"
+
 def get_container_status_logs(docker_id, killed=False):
 	'''
 Returns a tuple with (status, logs) for a particular container. Killed comes from the database
 	'''
-	container = client.containers.get(docker_id)
-	container.reload()
-	status = container.status
-	logs = container.logs().decode("utf-8")
-	# If killed, show an extra line in the logs indicating such
-	if killed or status == "killed":
-		return ("killed", f"{logs}\nKilled.")
-	else:
-		return (status, logs)
-
+	try:
+		container = client.containers.get(docker_id)
+		container.reload()
+		status = container.status
+		logs = container.logs().decode("utf-8")
+		# If killed, show an extra line in the logs indicating such
+		if killed or status == "killed":
+			return ("killed", f"{logs}\nKilled.")
+		else:
+			return (status, logs)
+	except docker.errors.NotFound as e:
+		return ("pruned", "This job was pruned. This means we are not retaining any more data on it.")
 def check_float(string):
 	try:
 		float(string)
