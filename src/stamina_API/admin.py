@@ -14,7 +14,6 @@ def check_password(password_plaintext, password_hashed):
 	"""
 Also use bcrypt to check if a password matches
 	"""
-	print(f"{password_plaintext}, {password_hashed}")
 	password_plaintext = password_plaintext.encode("utf-8")
 	password_hashed = password_hashed.encode("utf-8")
 	return bcrypt.checkpw(password_plaintext, password_hashed)
