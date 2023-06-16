@@ -28,7 +28,7 @@ INDEX_CONTENT = f"""
 LOGIN_CONTENT = """
 <!DOCTYPE html>
 <head>
-	<title>STAMINA API</title>
+	<title>Admin Login - STAMINA API</title>
 	<link rel="stylesheet" href="https://staminachecker.org/styles.css">
 </head>
 <body>
@@ -130,6 +130,47 @@ def create_html_err(error_msg, redir=True, redir_url="https://staminachecker.org
 </body>
 """
 
+def create_generic_page(content, title):
+	return f"""
+<!DOCTYPE html>
+<head>
+	<title>{title} - STAMINA API</title>
+	<link rel="stylesheet" href="https://staminachecker.org/styles.css">
+</head>
+<script>
+function kill(uid) {o}
+	fetch("/kill", {o}
+		method: "POST"
+		, mode: "cors"
+		, body: uid
+	{c}).then((response) => response.text()
+		.then((text) => {o}
+			console.log(text);
+	{c}));
+	location.reload();
+{c}
+
+function deleteJob(uid) {o}
+	fetch("/jobs", {o}
+		method: "DELETE"
+		, mode: "cors"
+		, body: uid
+	{c}).then((response) => response.text()
+		.then((text) => {o}
+			console.log(text);
+	{c}));
+	location.reload();
+{c}
+</script>
+<body>
+	<div class="content">
+		<h1>{title}</h1>
+		{content}
+	</div>
+	{footer}
+</body>
+"""
+
 def json_to_table(json):
 	html = "<table class=table>\n<tr><th>Key</th><th>Value</th></tr>"
 	for k, v in json.items():
@@ -143,17 +184,17 @@ def md_list_to_table(lst, first_row_header = True):
 	rng = None
 	if first_row_header:
 		rng = range(1, len(lst))
-		html += "<th>"
+		html += "<tr>"
 		for item in lst[0]:
-			html += f"<td>{item}</td>"
-		html += "</th>"
+			html += f"<th>{item}</th>"
+		html += "</tr>"
 	else:
 		rng = range(len(lst))
-		for i in rng:
-			row = lst[i]
-			html += "<tr>"
-			for item in row:
-				html += f"<td>{item}</td>"
-			html += "</tr>"	
+	for i in rng:
+		row = lst[i]
+		html += "<tr>"
+		for item in row:
+			html += f"<td>{item}</td>"
+		html += "</tr>"
 	return html + "</table>"
 	

@@ -13,7 +13,7 @@ import signal
 import sqlite3
 
 from .settings import Settings, EASTER_EGG
-from .Job import Job, stop_all_docker_containers, get_container_status_logs, kill_from_id
+from .Job import Job, stop_all_docker_containers, get_container_status_logs, kill_from_id, clean_from_id
 from .web import *
 from .log import *
 from .data import *
@@ -149,7 +149,7 @@ def authenticate(uname, passwd):
 Allows administrators to access things. Only returns true if user exists and is administrator
 	'''
 	conn = get_db_connection()
-	query_result = conn.execute("select passwd, admin from users where username = ?", (uname,))
+	query_result = conn.execute("select passwd, admin from users where username = ?", (uname,)).fetchall()
 	if len(query_result) == 0:
 		return False
 	hashed_pw = query_result[0]["passwd"]
@@ -351,14 +351,62 @@ def delete_job():
 		return "Internal server error.", 500
 	# Get the container and kill it
 	docker_id = query_result[0]["docker_id"]
-	clean_from_id(docker_id, jid)
+	try:
+		clean_from_id(docker_id, jid)
+	except Exception as e:
+		log(f"Got exception while trying to clean job {jid}. Perhaps the record exists but the job does not?\nException {e}")
 	conn.execute("delete from jobs where job_uid = ?", (jid,))
 	conn.commit()
 	return "Success"
 
 @app.route("/admin", methods=["POST"])
 def admin():
-	return "Not implemented", 500
+	content_type = request.headers.get("Content-Type")
+	# Handle both multipart data (as we would get from a web form,
+	# as well as a purely JSON object, in case the API wishes to encode the PRISM
+	# and CSL files within the JSON object
+	has_json = False
+	if content_type == "application/json":
+		has_json = True
+	elif "multipart/form-data" not in content_type and "application/x-www-form-urlencoded" not in content_type:
+		return create_html_err(f"Request not supported! (Requires either 'multipart/form-data', 'application/x-www-form-urlencoded', or 'application/json'; got {content_type})", redir=False), 415
+	request_data = None
+	if has_json:
+		request_data = request.json
+	else:
+		request_data = request.form
+	#check_request(request_data, ["username", "password"])
+	authenticated = authenticate(request_data["username"], request_data["password"])
+	ip = get_client_ip()
+	if not authenticated:
+		log(f"{ip} has tried and failed to log in to the admin page.")
+		return create_html_err("This username and password combination is unauthorized.", redir=False), 401
+	log(f"{ip} has successfully logged in to the admin page.")
+	conn = get_db_connection()
+	content = "<h2>Job List</h2>"
+	query_result = conn.execute("select * from jobs").fetchall()
+	if len(query_result) == 0:
+		content += "<p>No active jobs</p>"
+	else:
+		table = [["UID", "Docker ID", "Name", "Created", "Owner", "Actions", "&kappa;", "r<sub>&kappa;</sub>", "w"]]
+		for row in query_result:
+			uid = row["job_uid"]
+			killed = row["killed"]
+			killed_content = "Killed" if killed else f"<a onclick=kill('{uid}')>Kill</a>"
+			killed_content += f"&nbsp;<a onclick=deleteJob('{uid}')>Delete</a>"
+			table.append([
+				uid
+				, f"{row['docker_id'][0:5]}..."
+				, row["name"]
+				, row["created"]
+				, row["ip"]
+				, killed_content
+				, row["kappa"]
+				, row["rkappa"]
+				, row["window"]
+			])
+		content += md_list_to_table(table)
+	return create_generic_page(content, "Admin Page")
 
 @app.route("/rename", methods=["POST"])
 def rename_job():
