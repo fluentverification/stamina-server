@@ -19,7 +19,7 @@ INDEX_CONTENT = f"""
 	<div class="content">
 		<h1>Welcome to the STAMINA API</h1>
 		<p>Please visit <a href=https://staminachecker.org/run>https://staminachecker.org/run</a> in order to create and run a Job.</p>
-		<p>If you are looking for the admin page, please go <a href="/login">sign in.</a></p>
+		<p>If you are looking for the admin page, please go <a href="login">sign in.</a></p>
 	</div>
 	{footer}
 </body>
@@ -139,7 +139,7 @@ def create_generic_page(content, title):
 </head>
 <script>
 function kill(uid) {o}
-	fetch("/kill", {o}
+	fetch("kill", {o}
 		method: "POST"
 		, mode: "cors"
 		, body: uid
@@ -151,7 +151,7 @@ function kill(uid) {o}
 {c}
 
 function deleteJob(uid) {o}
-	fetch("/jobs", {o}
+	fetch("jobs", {o}
 		method: "DELETE"
 		, mode: "cors"
 		, body: uid
