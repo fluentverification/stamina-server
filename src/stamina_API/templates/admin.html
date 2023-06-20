@@ -1,5 +1,7 @@
 {% extends 'base.html' %}
 
+{% block title %} Dashboard for {{ user }} {% endblock %}
+
 {% block usarray %}
 <li class="right" id=user><a>{{ user }}</a>
 	<div class="dropdown-content" id=user-dropdown>
@@ -10,7 +12,43 @@
 
 {% block content %}
 <h2>Job List</h2>
+{% autoescape false %}
 {{ job_list_table }}
 <h2>IPs with active jobs</h2>
 {{ ip_list_table }}
+{% endautoescape %}
+<script>
+function kill(uid) {
+	fetch("./kill", {
+		method: "POST"
+		, mode: "cors"
+		, body: uid
+	}).then((response) => response.text()
+		.then((text) => {
+			console.log(text);
+	}));
+	location.reload();
+}
+
+function deleteJob(uid) {
+	fetch("./jobs", {
+		method: "DELETE"
+		, mode: "cors"
+		, body: uid
+	}).then((response) => response.text()
+		.then((text) => {
+			console.log(text);
+	}));
+	location.reload();
+}
+
+function logout() {
+	// For when we eventually migrate to having session tokens rather than having them have
+	// to re-send their username and password every single time.
+	if (localStorage.getItem("token") != null) {
+		localStorage.removeItem("token");
+	}
+	window.location = "/";
+}
+</script>
 {% endblock %}

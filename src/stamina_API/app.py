@@ -1,6 +1,6 @@
 #!flask/bin/python
 
-from flask import Flask, request, jsonify, Response
+from flask import Flask, request, jsonify, Response, render_template
 import secrets
 import sys
 from time import time, sleep
@@ -169,7 +169,7 @@ def after_request(response):
 
 @app.route("/")
 def get_index():
-	return INDEX_CONTENT
+	return render_template("index.html")
 
 # When we upgrade flask version we can just use @app.post
 @app.route("/jobs", methods=["POST"])
@@ -385,9 +385,8 @@ def admin():
 	conn = get_db_connection()
 	content = "<h2>Job List</h2>"
 	query_result = conn.execute("select * from jobs").fetchall()
-	if len(query_result) == 0:
-		content += "<p>No active jobs</p>"
-	else:
+	job_list_table = "<p>No active jobs</p>"
+	if len(query_result) != 0:
 		table = [["UID", "Docker ID", "Name", "Created", "Owner", "Status", "Actions", "&kappa;", "r<sub>&kappa;</sub>", "w"]]
 		for row in query_result:
 			uid = row["job_uid"]
@@ -408,20 +407,18 @@ def admin():
 				, row["rkappa"]
 				, row["window"]
 			])
-		content += md_list_to_table(table)
+		job_list_table = md_list_to_table(table)
 	# Generate list of IPs with most jobs ordered by number of jobs
+	ip_list_table = "<p>No IPs with active jobs</p>"
 	query_result = conn.execute("select ip, count(job_uid) as job_count from jobs group by ip order by job_count desc;").fetchall()
 	table2 = [["IP Address", "Number of Jobs"]]
 	for row in query_result:
 		ip = row["ip"]
 		job_count = row["job_count"]
 		table2.append([ip, job_count])
-	content += "<h2>IPs with active jobs</h2>"
 	if len(query_result) > 0:
-		content += md_list_to_table(table2)
-	else:
-		content += "<p>No IPs with active jobs</p>"
-	return create_generic_page(content, "Admin Page")
+		ip_list_table = md_list_to_table(table2)
+	return render_template("admin.html", job_list_table=job_list_table, ip_list_table=ip_list_table, user=request_data["username"])
 
 @app.route("/rename", methods=["POST"])
 def rename_job():
@@ -513,7 +510,7 @@ kills a job
 	
 @app.route("/login", methods=["GET"])
 def login_page():
-	return LOGIN_CONTENT
+	return render_template("login.html")
 
 #Create cleaning thread
 #t = Thread(target=periodically_clean_jobs)

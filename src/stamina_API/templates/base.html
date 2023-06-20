@@ -8,6 +8,7 @@
 <style>
 #user:hover #user-dropdown {
 	display: block;
+	height: auto;
 }
 </style>
 <body>
@@ -17,10 +18,11 @@
 				<span id="slogo">STAMINA <i>API</i></span>
 			</a>
 		</li>
-		<li><a class="openbutton" id="openbutton" onclick="openNav()" style="display: block;">☰</a></li>
-		<li><a class="closebutton" id="closebutton" onclick="closeNav()" style="display: none;">×</a></li>
+		<li><a class="openbutton" id="openbutton" onclick="openNav()">☰</a></li>
+		<li><a class="closebutton" id="closebutton" onclick="closeNav()">×</a></li>
 		<li><a href="https://staminachecker.org/run">New Job</a></li>
 		<li><a href="https://staminachecker.org/api/myjobs">My Jobs</a></li>
+		<li class="right"><a title="Toggle Light/Dark Mode" onclick="toggleDarkMode()"><img src="https://staminachecker.org/images/icons/darkLight.svg" alt="Toggle light/dark mode" height="15"></a></li>
 		{% block usarray %}
 		{% endblock %}
 	</ul>
