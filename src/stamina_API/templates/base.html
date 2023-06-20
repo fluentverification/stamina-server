@@ -3,6 +3,7 @@
 	<title>{% block title %} {% endblock %} - STAMINA API</title>
 	<link rel="stylesheet" href="https://staminachecker.org/styles.css">
 	<script type="text/javascript" src="https://staminachecker.org/scripts/scripts.js"></script>
+	{% block meta %}{% endblock %}
 </head>
 <style>
 #user:hover #user-dropdown {
@@ -20,11 +21,8 @@
 		<li><a class="closebutton" id="closebutton" onclick="closeNav()" style="display: none;">×</a></li>
 		<li><a href="https://staminachecker.org/run">New Job</a></li>
 		<li><a href="https://staminachecker.org/api/myjobs">My Jobs</a></li>
-		<li class="right" id=user><a>{{ user }}</a>
-			<div class="dropdown-content" id=user-dropdown>
-				<a onclick="logout()">Log Out</a>
-			</div>
-		</li>
+		{% block usarray %}
+		{% endblock %}
 	</ul>
 	<div id="top-buffer" class="top-buffer"><br></div>
 	<div class="content">

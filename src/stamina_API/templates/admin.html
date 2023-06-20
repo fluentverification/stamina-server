@@ -1,5 +1,13 @@
 {% extends 'base.html' %}
 
+{% block usarray %}
+<li class="right" id=user><a>{{ user }}</a>
+	<div class="dropdown-content" id=user-dropdown>
+		<a onclick="logout()">Log Out</a>
+	</div>
+</li>
+{% endblock %}
+
 {% block content %}
 <h2>Job List</h2>
 {{ job_list_table }}
