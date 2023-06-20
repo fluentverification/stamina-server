@@ -20,7 +20,7 @@ from .data import *
 #from .init_db import *
 from .admin import check_password
 
-app = Flask(__name__)
+app = Flask(__name__, template_folder=os.environ["STAMINA_TEMPLATE_FOLDER"])
 
 # List of all jobs and their associated
 def get_db_connection():
