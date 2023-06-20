@@ -34,7 +34,7 @@ LOGIN_CONTENT = """
 <body>
 	<div class="content">
 		<h1>Log into the admin page</h1>
-		<form method="POST" action="/admin" enctype="multipart/form-data">
+		<form method="POST" action="./admin" enctype="multipart/form-data">
 			<label for="username">Username</label>
 			<input type="text" name="username" />
 			<label for="password">Password</label>

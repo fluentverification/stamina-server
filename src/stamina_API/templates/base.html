@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<head>
+	<title>{% block title %} {% endblock %} - STAMINA API</title>
+	<link rel="stylesheet" href="https://staminachecker.org/styles.css">
+	<script type="text/javascript" src="https://staminachecker.org/scripts/scripts.js"></script>
+</head>
+<style>
+#user:hover #user-dropdown {
+	display: block;
+}
+</style>
+<body>
+	<ul id="navbar" class="navbar">
+		<li>
+			<a id="stamina" class="stamina-name" href="index.html">
+				<span id="slogo">STAMINA <i>API</i></span>
+			</a>
+		</li>
+		<li><a class="openbutton" id="openbutton" onclick="openNav()" style="display: block;">☰</a></li>
+		<li><a class="closebutton" id="closebutton" onclick="closeNav()" style="display: none;">×</a></li>
+		<li><a href="https://staminachecker.org/run">New Job</a></li>
+		<li><a href="https://staminachecker.org/api/myjobs">My Jobs</a></li>
+		<li class="right" id=user><a>{{ user }}</a>
+			<div class="dropdown-content" id=user-dropdown>
+				<a onclick="logout()">Log Out</a>
+			</div>
+		</li>
+	</ul>
+	<div id="top-buffer" class="top-buffer"><br></div>
+	<div class="content">
+		{% block content %}{% endblock %}
+	</div>
+	<script>
+function alertLogin() {
+	alert("Cannot reset via web interface. Ask Josh to reset your password manually.");
+}
+	</script>
+	<div class=footer>
+		<div id="slogo"><b>STAMINA</b></div> is provided as a free service and funded via NSF Grants 1856733, 1856740, and 1900542
+	</div>
+</body>
