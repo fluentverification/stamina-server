@@ -1,0 +1,33 @@
+{% extends 'base.html' %}
+
+{% block title %}
+ERROR {{error_msg}}
+{% endblock %}
+{% block meta %}
+{% if redir %}
+<meta http-equiv="refresh" content="{{timeout}};url={{redir_url}}" />
+{% endif %}
+{% endblock %}
+{% block content %}
+	<h1>Response from Server</h1>
+	<div class="error">Got error from server:<br>{{error_msg}}</div>
+	{% if redir %}
+	<div>Redirecting to <a href={{redir_url}}>{{redir_url}}</a> in <span id=timeout>TIME</span> seconds.</div>
+	{% endif %}
+	<div>
+	{{after_error_msg}}
+<script>
+let timeout = document.getElementById('timeout');
+var time = {timeout};
+
+function reduceTime() {
+	if (time == 0) return;
+	time--;
+	timeout.innerHTML = time;
+	setTimeout(reduceTime, 1000);
+}
+
+reduceTime();
+</script>
+{% endblock %}
+
