@@ -409,6 +409,18 @@ def admin():
 				, row["window"]
 			])
 		content += md_list_to_table(table)
+	# Generate list of IPs with most jobs ordered by number of jobs
+	query_result = conn.execute("select ip, count(job_uid) as job_count from jobs group by ip order by job_count desc;").fetchall()
+	table2 = [["IP Address", "Number of Jobs"]]
+	for row in query_result:
+		ip = row["ip"]
+		job_count = row["job_count"]
+		table2.append([ip, job_count])
+	content += "<h2>IPs with active jobs</h2>"
+	if len(query_result) > 0:
+		content += md_list_to_table(table2)
+	else:
+		content += "<p>No IPs with active jobs</p>"
 	return create_generic_page(content, "Admin Page")
 
 @app.route("/rename", methods=["POST"])
