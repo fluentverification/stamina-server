@@ -1,4 +1,5 @@
 import os
+import string
 
 class Settings:
 	# API Settings
@@ -14,6 +15,7 @@ class Settings:
 	TMP_DIRECTORY_LOCATION = os.path.join(os.getcwd(), "api_data")
 	# STAMINA Settings
 	STAMINA_DEFAULT_METHOD = "reexploring"
+	ALLOWED_NAME_CHARACTERS = string.ascii_letters + string.digits + " .-_=+"
 
 EASTER_EGG = """
                                 _____

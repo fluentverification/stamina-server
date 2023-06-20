@@ -436,6 +436,9 @@ def rename_job():
 	jid = request_json["id"]
 	name = request_json["name"]
 	log(f"{get_client_ip()} wishes to rename job {jid} to name \"{name}\"")
+	for c in name:
+		if not c in Settings.ALLOWED_NAME_CHARACTERS:
+			return f"Illegal character in name! '{c}'", 400
 	conn = get_db_connection()
 	query_result = conn.execute("select name from jobs where job_uid = ?", (jid,)).fetchall()
 	if len(query_result) == 0:
