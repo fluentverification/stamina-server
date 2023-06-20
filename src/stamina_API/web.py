@@ -1,15 +1,6 @@
 from .settings import Settings
 from flask import render_template
 
-o = '{'
-c = '}'
-
-footer = """
-<div class=footer>
-	<div id="slogo"><b>STAMINA</b></div> is provided as a free service and funded via NSF Grants 1856733, 1856740, and 1900542
-</div>
-"""
-
 def create_html_for_response(response, job_status):
 	uid = response["id"]
 	status = response["status"]
@@ -19,27 +10,7 @@ def create_html_for_response(response, job_status):
 def create_html_err(error_msg, redir=True, redir_url="https://staminachecker.org/api/myjobs", after_error_msg = ""):
 	redir_str = ""
 	redir_msg = ""
-	if redir:
-		redir_str = f"""<meta http-equiv="refresh" content="5;url={redir_url}" />"""
-		redir_msg = f"""<div>Redirecting to {redir_url}</div>"""
-	return f"""
-<!DOCTYPE html>
-<head>
-	<title>ERROR: {error_msg}</title>
-	<link rel="stylesheet" href="https://staminachecker.org/styles.css">
-	{redir_str}
-</head>
-<body>
-	<div class="content">
-	<h1>Response from Server</h1>
-	<div class="error">Got error from server:<br>{error_msg}</div>
-	{redir_msg}
-	<div>
-	{after_error_msg}
-	</div>
-	{footer}
-</body>
-"""
+	return render_template("error.html", redir_url=redir_url, redir=redir, error_msg=error_msg, after_error_msg=after_error_msg)
 
 def json_to_table(json):
 	html = "<table class=table>\n<tr><th>Key</th><th>Value</th></tr>"

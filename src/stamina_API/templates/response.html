@@ -23,8 +23,6 @@ Job {{uid}}
 	</ul>
 	<a class="button" href="https://staminachecker.org/api/myjobs"><i class="icon icon_go-next"></i>See My Jobs</a>
 	<a class="button" href="https://staminachecker.org/api/job?uid={{uid}}"><i class="icon icon_go-next"></i>See Current Jobs</a>
-{% endblock %}
-
 <script>
 let timeout = document.getElementById('timeout');
 var time = {timeout};
@@ -38,3 +36,5 @@ function reduceTime() {
 
 reduceTime();
 </script>
+{% endblock %}
+
