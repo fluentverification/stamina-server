@@ -18,9 +18,39 @@ def json_to_table(json):
 		html += f"<tr><td>{k}</td><td>{v}</td></td>"
 	return html + "</table>"
 
-def md_list_to_table(lst, first_row_header = True):
+def md_list_to_table(lst, first_row_header = True, table_id="table-wrapper"):
 	if len(lst) == 0:
 		return "<div>Empty Table</div>"
+	o = '{'
+	c = '}'
+	if first_row_header:
+		header = "["
+		for val in lst[0]:
+			header += f"{o}name: gridjs.html(\"{val}\"),id:\"{val}\"{c},"
+		header = header[:len(header) - 1] + "]"
+		data = "["
+		for row in lst[1:]:
+			data += "["
+			for val in row:
+				data += f"gridjs.html(\"{val}\"),"
+			data = data[:len(data) - 1] + "],"
+		data = data[:len(data) - 1] + "]"
+		return f"""<div id={table_id}></div><script>
+		new gridjs.Grid({o}
+			columns: {header},
+			search: true,
+			sort: true,
+			resizable: true,
+			className: {o}
+				table: "table"
+			{c},
+			data: {data},
+		{c}).render(document.getElementById("{table_id}"));
+	</script>"""
+
+def md_list_to_html_table(lst, first_row_header = True):
+	if len(lst) == 0:
+		return "Empty Table"
 	html = "<table class=table>"
 	rng = None
 	if first_row_header:

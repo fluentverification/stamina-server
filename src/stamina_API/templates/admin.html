@@ -2,6 +2,11 @@
 
 {% block title %} Dashboard for {{ user }} {% endblock %}
 
+{% block meta %}
+<script src="https://cdn.jsdelivr.net/npm/gridjs/dist/gridjs.umd.js"></script>
+<link href="https://cdn.jsdelivr.net/npm/gridjs/dist/theme/mermaid.min.css" rel="stylesheet" />
+{% endblock %}
+
 {% block usarray %}
 <li class="right" id=user><a>{{ user }}</a>
 	<div class="dropdown-content" id=user-dropdown>

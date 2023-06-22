@@ -20,7 +20,13 @@ from .data import *
 #from .init_db import *
 from .admin import check_password
 
-app = Flask(__name__, template_folder=os.environ["STAMINA_TEMPLATE_FOLDER"])
+TEMPLATE_FOLDER = None
+try: 
+	TEMPLATE_FOLDER = os.environ["STAMINA_TEMPLATE_FOLDER"]
+except KeyError:
+	TEMPLATE_FOLDER = f"{os.getcwd()}/templates"
+
+app = Flask(__name__, template_folder=TEMPLATE_FOLDER)
 
 # List of all jobs and their associated
 def get_db_connection():
@@ -395,6 +401,8 @@ def admin():
 			status = get_just_status(docker_id)
 			actions = "" if killed or status == "exited" or status == "pruned" else f"<a onclick=kill('{uid}')>Kill</a>"
 			actions += f"&nbsp;<a onclick=deleteJob('{uid}')>Delete</a>"
+			if status != "pruned":
+				actions += f"&nbsp;<a href=https://staminachecker.org/api/job?uid={uid} target=_blank>View</a>"
 			table.append([
 				uid
 				, f"{docker_id[0:5]}..."
@@ -407,7 +415,7 @@ def admin():
 				, row["rkappa"]
 				, row["window"]
 			])
-		job_list_table = md_list_to_table(table)
+		job_list_table = md_list_to_table(table, table_id="jobs-wrapper")
 	# Generate list of IPs with most jobs ordered by number of jobs
 	ip_list_table = "<p>No IPs with active jobs</p>"
 	query_result = conn.execute("select ip, count(job_uid) as job_count from jobs group by ip order by job_count desc;").fetchall()
@@ -417,7 +425,7 @@ def admin():
 		job_count = row["job_count"]
 		table2.append([ip, job_count])
 	if len(query_result) > 0:
-		ip_list_table = md_list_to_table(table2)
+		ip_list_table = md_list_to_table(table2, table_id="ips-wrapper")
 	return render_template("admin.html", job_list_table=job_list_table, ip_list_table=ip_list_table, user=request_data["username"])
 
 @app.route("/rename", methods=["POST"])
