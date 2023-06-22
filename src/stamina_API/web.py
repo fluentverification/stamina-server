@@ -44,6 +44,9 @@ def md_list_to_table(lst, first_row_header = True, table_id="table-wrapper"):
 			className: {o}
 				table: "table"
 			{c},
+			pagination: {o}
+				limit: 20
+			{c} ,
 			data: {data},
 		{c}).render(document.getElementById("{table_id}"));
 	</script>"""
