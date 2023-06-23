@@ -3,12 +3,23 @@
 	<title>{% block title %} {% endblock %} - STAMINA API</title>
 	<link rel="stylesheet" href="https://staminachecker.org/styles.css">
 	<script type="text/javascript" src="https://staminachecker.org/scripts/scripts.js"></script>
+	<link rel="stylesheet" type="text/css" href="https://cdn.kde.org/breeze-icons/icons.css">
+	<link rel="icon" type="image/x-icon" href="https://staminachecker.org/images/favicon.svg">
 	{% block meta %}{% endblock %}
 </head>
 <style>
 #user:hover #user-dropdown {
 	display: block;
 	height: auto;
+}
+
+.small-edit .icon {
+	font-size: 9pt !important;
+	cursor: pointer;
+}
+
+.small-edit:hover {
+	color: var(--accent-dark);
 }
 </style>
 <body>

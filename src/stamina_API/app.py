@@ -406,7 +406,7 @@ def admin():
 			table.append([
 				uid
 				, f"{docker_id[0:5]}..."
-				, row["name"]
+				, row["name"] + f"&nbsp;<span class=small-edit onclick=\\\"requestRenameJob('{uid}')\\\"><i class=\\\"icon icon_document-edit\\\"></i></span>"
 				, row["created"]
 				, row["ip"]
 				, "Killed" if killed else status

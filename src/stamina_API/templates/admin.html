@@ -55,5 +55,48 @@ function logout() {
 	}
 	window.location = "/";
 }
+
+/**
+ * Sends an HTTP request to the /rename endpoint for STAMINA to rename a job
+ * with a certain UID.
+ * */
+function renameJob(uid, newName) {
+	fetch("/rename", {
+		method: "POST"
+		, mode: "cors"
+// 		, headers: new Headers({
+// 			"Content-Type": "application/json"
+// 			, "Access-Control-Allow-Origin":"*"
+// 			, "Access-Control-Allow-Headers": "*"
+// 		})
+		, body: JSON.stringify({
+			id: uid
+			, name: newName
+		})
+	}).then((response) => {
+		if (response.status == 200) {
+			document.getElementById("job-name-" + uid).innerHTML = newName;
+		}
+		else {
+			response.text()
+				.then((text) => {
+					alert("Got status \"" + response.status + "\" when trying to rename Job!\nError: " + text);
+				});
+		}
+	});
+}
+
+function requestRenameJob(uid) {
+	let name = prompt("New name for job:");
+	if (name == null) {
+		return;
+	}
+	else if (name == "") {
+		alert("Job name cannot be empty!");
+		return;
+	}
+	renameJob(uid, name);
+	location.reload();
+}
 </script>
 {% endblock %}
