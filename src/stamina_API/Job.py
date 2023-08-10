@@ -44,9 +44,9 @@ Returns a tuple with (status, logs) for a particular container. Killed comes fro
 		container.reload()
 		status = container.status
 		logs = container.logs().decode("utf-8")
-			.replace("<", "&lt;")
-			.replace(">", "&gt;")
-			.replace("script", "")
+		logs = logs.replace("<", "&lt;")
+		logs = logs.replace(">", "&gt;")
+		logs = logs.replace("script", "")
 		# If killed, show an extra line in the logs indicating such
 		if killed or status == "killed":
 			return ("killed", f"{logs}\nKilled.")
