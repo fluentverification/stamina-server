@@ -1,0 +1,102 @@
+{% extends 'base.html' %}
+
+{% block title %} Dashboard for {{ user }} {% endblock %}
+
+{% block meta %}
+<script src="https://cdn.jsdelivr.net/npm/gridjs/dist/gridjs.umd.js"></script>
+<link href="https://cdn.jsdelivr.net/npm/gridjs/dist/theme/mermaid.min.css" rel="stylesheet" />
+{% endblock %}
+
+{% block usarray %}
+<li class="right" id=user><a>{{ user }}</a>
+	<div class="dropdown-content" id=user-dropdown>
+		<a onclick="logout()">Log Out</a>
+	</div>
+</li>
+{% endblock %}
+
+{% block content %}
+<h2>Job List</h2>
+{% autoescape false %}
+{{ job_list_table }}
+<h2>IPs with active jobs</h2>
+{{ ip_list_table }}
+{% endautoescape %}
+<script>
+function kill(uid) {
+	fetch("./kill", {
+		method: "POST"
+		, mode: "cors"
+		, body: uid
+	}).then((response) => response.text()
+		.then((text) => {
+			console.log(text);
+	}));
+	location.reload();
+}
+
+function deleteJob(uid) {
+	fetch("./jobs", {
+		method: "DELETE"
+		, mode: "cors"
+		, body: uid
+	}).then((response) => response.text()
+		.then((text) => {
+			console.log(text);
+	}));
+	location.reload();
+}
+
+function logout() {
+	// For when we eventually migrate to having session tokens rather than having them have
+	// to re-send their username and password every single time.
+	if (localStorage.getItem("token") != null) {
+		localStorage.removeItem("token");
+	}
+	window.location = "/";
+}
+
+/**
+ * Sends an HTTP request to the /rename endpoint for STAMINA to rename a job
+ * with a certain UID.
+ * */
+function renameJob(uid, newName) {
+	fetch("/rename", {
+		method: "POST"
+		, mode: "cors"
+// 		, headers: new Headers({
+// 			"Content-Type": "application/json"
+// 			, "Access-Control-Allow-Origin":"*"
+// 			, "Access-Control-Allow-Headers": "*"
+// 		})
+		, body: JSON.stringify({
+			id: uid
+			, name: newName
+		})
+	}).then((response) => {
+		if (response.status == 200) {
+			document.getElementById("job-name-" + uid).innerHTML = newName;
+		}
+		else {
+			response.text()
+				.then((text) => {
+					alert("Got status \"" + response.status + "\" when trying to rename Job!\nError: " + text);
+				});
+		}
+	});
+}
+
+function requestRenameJob(uid) {
+	let name = prompt("New name for job:");
+	if (name == null) {
+		return;
+	}
+	else if (name == "") {
+		alert("Job name cannot be empty!");
+		return;
+	}
+	renameJob(uid, name);
+	location.reload();
+}
+</script>
+{% endblock %}

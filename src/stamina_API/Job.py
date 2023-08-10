@@ -1,5 +1,5 @@
 '''
-TODO: 
+TODO:
 - Use Flask's file uploads (https://flask.palletsprojects.com/en/2.0.x/patterns/fileuploads/) methods rather than trying to take file content as a string.
 - Save file into a folder <cwd>/<job-id>/model.prism, etc for prop file
 - Mount that folder into the docker container
@@ -26,20 +26,34 @@ METHOD_FLAGS = {
 	, "priority": "-P"
 }
 
+def get_just_status(docker_id):
+	try:
+		container = client.containers.get(docker_id)
+		container.reload()
+		status = container.status
+		return status
+	except docker.errors.NotFound as e:
+		return "pruned"
+
 def get_container_status_logs(docker_id, killed=False):
 	'''
 Returns a tuple with (status, logs) for a particular container. Killed comes from the database
 	'''
-	container = client.containers.get(docker_id)
-	container.reload()
-	status = container.status
-	logs = container.logs().decode("utf-8")
-	# If killed, show an extra line in the logs indicating such
-	if killed or status == "killed":
-		return ("killed", f"{logs}\nKilled.")
-	else:
-		return (status, logs)
-
+	try:
+		container = client.containers.get(docker_id)
+		container.reload()
+		status = container.status
+		logs = container.logs().decode("utf-8")
+		logs = logs.replace("<", "&lt;")
+		logs = logs.replace(">", "&gt;")
+		logs = logs.replace("script", "")
+		# If killed, show an extra line in the logs indicating such
+		if killed or status == "killed":
+			return ("killed", f"{logs}\nKilled.")
+		else:
+			return (status, logs)
+	except docker.errors.NotFound as e:
+		return ("pruned", "This job was pruned. This means we are not retaining any more data on it.")
 def check_float(string):
 	try:
 		float(string)
@@ -128,7 +142,7 @@ class Job:
 	def clean(self):
 		if os.path.isdir(self.path):
 			rmtree(self.path)
-	
+
 	def has_tra_file(self):
 		return self.create_tra_file and self.get_status() == "exited"
 
@@ -145,7 +159,7 @@ class Job:
 	def __str__(self):
 		data = self.__json__()
 		return jsonify(data)
-	
+
 	def __json__(self, **options):
 		data = {}
 		data["uid"] = self.uid

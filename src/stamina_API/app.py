@@ -1,6 +1,6 @@
 #!flask/bin/python
 
-from flask import Flask, request, jsonify, Response
+from flask import Flask, request, jsonify, Response, render_template
 import secrets
 import sys
 from time import time, sleep
@@ -13,13 +13,20 @@ import signal
 import sqlite3
 
 from .settings import Settings, EASTER_EGG
-from .Job import Job, stop_all_docker_containers, get_container_status_logs, kill_from_id
+from .Job import Job, stop_all_docker_containers, get_container_status_logs, kill_from_id, clean_from_id, get_just_status
 from .web import *
 from .log import *
 from .data import *
-from .init_db import *
+#from .init_db import *
+from .admin import check_password
 
-app = Flask(__name__)
+TEMPLATE_FOLDER = None
+try:
+	TEMPLATE_FOLDER = os.environ["STAMINA_TEMPLATE_FOLDER"]
+except KeyError:
+	TEMPLATE_FOLDER = f"{os.getcwd()}/templates"
+
+app = Flask(__name__, template_folder=TEMPLATE_FOLDER)
 
 # List of all jobs and their associated
 def get_db_connection():
@@ -86,7 +93,7 @@ def check_request(request, required_fields):
 	for field in required_fields:
 		if not field in request_json:
 			return False, {"error": f"Field \'{field}\' is required!"}, 400
-		
+
 def get_number_jobs(ip = None, conn=None):
 	# If IP address is none, we get the total count of jobs on the server
 	if conn is None:
@@ -100,7 +107,7 @@ def get_number_jobs(ip = None, conn=None):
 			, (ip,)
 		).fetchall()[0]['cnt']
 		return count
-		
+
 def create_job(job_id, job_data=None, model_provided=False, prop_provided=False, path="", job_name=None):
 	conn = get_db_connection()
 	if get_number_jobs(conn=conn) > Settings.MAX_ALLOWED_JOBS:
@@ -145,10 +152,15 @@ insert into jobs (
 
 def authenticate(uname, passwd):
 	'''
-This method will eventually allow administrators (such as us) access
+Allows administrators to access things. Only returns true if user exists and is administrator
 	'''
-	# This will be a TODO
-	return False
+	conn = get_db_connection()
+	query_result = conn.execute("select passwd, admin from users where username = ?", (uname,)).fetchall()
+	if len(query_result) == 0:
+		return False
+	hashed_pw = query_result[0]["passwd"]
+	admin = query_result[0]["admin"] == 1
+	return admin and check_password(passwd, hashed_pw)
 
 def get_random_id():
 	secret = secrets.token_urlsafe(16)
@@ -163,7 +175,7 @@ def after_request(response):
 
 @app.route("/")
 def get_index():
-	return INDEX_CONTENT
+	return render_template("index.html")
 
 # When we upgrade flask version we can just use @app.post
 @app.route("/jobs", methods=["POST"])
@@ -224,7 +236,7 @@ def post_jobs():
 		if model_provided and prop_provided:
 			model_file = request.files["model_file"]
 			prop_file = request.files["prop_file"]
-			# Check the sizes of each file 
+			# Check the sizes of each file
 			model_size = model_file.seek(0, os.SEEK_END)
 			prop_size = prop_file.seek(0, os.SEEK_END)
 			if model_size == 0 or prop_size == 0:
@@ -345,10 +357,76 @@ def delete_job():
 		return "Internal server error.", 500
 	# Get the container and kill it
 	docker_id = query_result[0]["docker_id"]
-	clean_from_id(docker_id, jid)
+	try:
+		clean_from_id(docker_id, jid)
+	except Exception as e:
+		log(f"Got exception while trying to clean job {jid}. Perhaps the record exists but the job does not?\nException {e}")
 	conn.execute("delete from jobs where job_uid = ?", (jid,))
 	conn.commit()
 	return "Success"
+
+@app.route("/admin", methods=["POST"])
+def admin():
+	content_type = request.headers.get("Content-Type")
+	# Handle both multipart data (as we would get from a web form,
+	# as well as a purely JSON object, in case the API wishes to encode the PRISM
+	# and CSL files within the JSON object
+	has_json = False
+	if content_type == "application/json":
+		has_json = True
+	elif "multipart/form-data" not in content_type and "application/x-www-form-urlencoded" not in content_type:
+		return create_html_err(f"Request not supported! (Requires either 'multipart/form-data', 'application/x-www-form-urlencoded', or 'application/json'; got {content_type})", redir=False), 415
+	request_data = None
+	if has_json:
+		request_data = request.json
+	else:
+		request_data = request.form
+	#check_request(request_data, ["username", "password"])
+	authenticated = authenticate(request_data["username"], request_data["password"])
+	ip = get_client_ip()
+	if not authenticated:
+		log(f"{ip} has tried and failed to log in to the admin page.")
+		return create_html_err("This username and password combination is unauthorized.", redir=False), 401
+	log(f"{ip} has successfully logged in to the admin page.")
+	conn = get_db_connection()
+	content = "<h2>Job List</h2>"
+	query_result = conn.execute("select * from jobs").fetchall()
+	job_list_table = "<p>No active jobs</p>"
+	if len(query_result) != 0:
+		table = [["UID", "Docker ID", "Name", "Created", "Owner", "Status", "Actions", "&kappa;", "r<sub>&kappa;</sub>", "w"]]
+		for row in query_result:
+			uid = row["job_uid"]
+			docker_id = row["docker_id"]
+			killed = row["killed"]
+			status = get_just_status(docker_id)
+			actions = "" if killed or status == "exited" or status == "pruned" else f"<a href=#  onclick=kill('{uid}') title='Kill Job'><i class=\\\"icon just_icon icon_process-stop\\\"></i></a>"
+			actions += f"&nbsp;<a href=# onclick=deleteJob('{uid}') title='Delete Job'><i class=\\\"icon just_icon icon_edit-delete\\\"></i></a>"
+			if status != "pruned":
+				actions += f"&nbsp;<a href=https://staminachecker.org/api/job?uid={uid} target=_blank title='View Job'><i class=\\\"icon just_icon icon_link\\\"></i></a>"
+			table.append([
+				uid
+				, f"{docker_id[0:5]}..."
+				, row["name"] + f"&nbsp;<span class=small-edit onclick=\\\"requestRenameJob('{uid}')\\\"><i class=\\\"icon just_icon icon_document-edit\\\"></i></span>"
+				, row["created"]
+				, row["ip"]
+				, "Killed" if killed else status
+				, actions
+				, row["kappa"]
+				, row["rkappa"]
+				, row["window"]
+			])
+		job_list_table = md_list_to_table(table, table_id="jobs-wrapper")
+	# Generate list of IPs with most jobs ordered by number of jobs
+	ip_list_table = "<p>No IPs with active jobs</p>"
+	query_result = conn.execute("select ip, count(job_uid) as job_count from jobs group by ip order by job_count desc;").fetchall()
+	table2 = [["IP Address", "Number of Jobs"]]
+	for row in query_result:
+		ip = row["ip"]
+		job_count = row["job_count"]
+		table2.append([ip, job_count])
+	if len(query_result) > 0:
+		ip_list_table = md_list_to_table(table2, table_id="ips-wrapper")
+	return render_template("admin.html", job_list_table=job_list_table, ip_list_table=ip_list_table, user=request_data["username"])
 
 @app.route("/rename", methods=["POST"])
 def rename_job():
@@ -366,6 +444,9 @@ def rename_job():
 	jid = request_json["id"]
 	name = request_json["name"]
 	log(f"{get_client_ip()} wishes to rename job {jid} to name \"{name}\"")
+	for c in name:
+		if not c in Settings.ALLOWED_NAME_CHARACTERS:
+			return f"Illegal character in name! '{c}'", 400
 	conn = get_db_connection()
 	query_result = conn.execute("select name from jobs where job_uid = ?", (jid,)).fetchall()
 	if len(query_result) == 0:
@@ -438,9 +519,13 @@ kills a job
 	return "Success", 200
 	#del jobs[jid]
 
+@app.route("/login", methods=["GET"])
+def login_page():
+	return render_template("login.html")
+
 #Create cleaning thread
-t = Thread(target=periodically_clean_jobs)
-t.start()
+#t = Thread(target=periodically_clean_jobs)
+#t.start()
 
 def exit_handler(signum, frame):
 	'''

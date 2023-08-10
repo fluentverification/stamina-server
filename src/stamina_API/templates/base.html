@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<head>
+	<title>{% block title %} {% endblock %} - STAMINA API</title>
+	<link rel="stylesheet" href="https://staminachecker.org/styles.css">
+	<script type="text/javascript" src="https://staminachecker.org/scripts/scripts.js"></script>
+	<link rel="stylesheet" type="text/css" href="https://cdn.kde.org/breeze-icons/icons.css">
+	<link rel="icon" type="image/x-icon" href="https://staminachecker.org/images/favicon.svg">
+	{% block meta %}{% endblock %}
+</head>
+<style>
+#user:hover #user-dropdown {
+	display: block;
+	height: auto;
+}
+
+.small-edit .icon {
+	font-size: 9pt !important;
+	cursor: pointer;
+}
+
+.small-edit:hover {
+	color: var(--accent-dark);
+}
+</style>
+<body>
+	<ul id="navbar" class="navbar">
+		<li>
+			<a id="stamina" class="stamina-name" href="index.html">
+				<span id="slogo">STAMINA <i>API</i></span>
+			</a>
+		</li>
+		<li><a class="openbutton" id="openbutton" onclick="openNav()">☰</a></li>
+		<li><a class="closebutton" id="closebutton" onclick="closeNav()">×</a></li>
+		<li><a href="https://staminachecker.org/run">New Job</a></li>
+		<li><a href="https://staminachecker.org/api/myjobs">My Jobs</a></li>
+		<li class="right"><a title="Toggle Light/Dark Mode" onclick="toggleDarkMode()"><img src="https://staminachecker.org/images/icons/darkLight.svg" alt="Toggle light/dark mode" height="15"></a></li>
+		{% block usarray %}
+		{% endblock %}
+	</ul>
+	<div id="top-buffer" class="top-buffer"><br></div>
+	<div class="content">
+		{% block content %}{% endblock %}
+	</div>
+	<script>
+function alertLogin() {
+	alert("Cannot reset via web interface. Ask Josh to reset your password manually.");
+}
+	</script>
+	<div class=footer>
+		<div id="slogo"><b>STAMINA</b></div> is provided as a free service and funded via NSF Grants 1856733, 1856740, and 1900542
+	</div>
+</body>
