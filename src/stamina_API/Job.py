@@ -1,5 +1,5 @@
 '''
-TODO: 
+TODO:
 - Use Flask's file uploads (https://flask.palletsprojects.com/en/2.0.x/patterns/fileuploads/) methods rather than trying to take file content as a string.
 - Save file into a folder <cwd>/<job-id>/model.prism, etc for prop file
 - Mount that folder into the docker container
@@ -44,6 +44,9 @@ Returns a tuple with (status, logs) for a particular container. Killed comes fro
 		container.reload()
 		status = container.status
 		logs = container.logs().decode("utf-8")
+			.replace("<", "&lt;")
+			.replace(">", "&gt;")
+			.replace("script", "")
 		# If killed, show an extra line in the logs indicating such
 		if killed or status == "killed":
 			return ("killed", f"{logs}\nKilled.")
@@ -139,7 +142,7 @@ class Job:
 	def clean(self):
 		if os.path.isdir(self.path):
 			rmtree(self.path)
-	
+
 	def has_tra_file(self):
 		return self.create_tra_file and self.get_status() == "exited"
 
@@ -156,7 +159,7 @@ class Job:
 	def __str__(self):
 		data = self.__json__()
 		return jsonify(data)
-	
+
 	def __json__(self, **options):
 		data = {}
 		data["uid"] = self.uid

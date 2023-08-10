@@ -21,7 +21,7 @@ from .data import *
 from .admin import check_password
 
 TEMPLATE_FOLDER = None
-try: 
+try:
 	TEMPLATE_FOLDER = os.environ["STAMINA_TEMPLATE_FOLDER"]
 except KeyError:
 	TEMPLATE_FOLDER = f"{os.getcwd()}/templates"
@@ -93,7 +93,7 @@ def check_request(request, required_fields):
 	for field in required_fields:
 		if not field in request_json:
 			return False, {"error": f"Field \'{field}\' is required!"}, 400
-		
+
 def get_number_jobs(ip = None, conn=None):
 	# If IP address is none, we get the total count of jobs on the server
 	if conn is None:
@@ -107,7 +107,7 @@ def get_number_jobs(ip = None, conn=None):
 			, (ip,)
 		).fetchall()[0]['cnt']
 		return count
-		
+
 def create_job(job_id, job_data=None, model_provided=False, prop_provided=False, path="", job_name=None):
 	conn = get_db_connection()
 	if get_number_jobs(conn=conn) > Settings.MAX_ALLOWED_JOBS:
@@ -236,7 +236,7 @@ def post_jobs():
 		if model_provided and prop_provided:
 			model_file = request.files["model_file"]
 			prop_file = request.files["prop_file"]
-			# Check the sizes of each file 
+			# Check the sizes of each file
 			model_size = model_file.seek(0, os.SEEK_END)
 			prop_size = prop_file.seek(0, os.SEEK_END)
 			if model_size == 0 or prop_size == 0:
@@ -399,14 +399,14 @@ def admin():
 			docker_id = row["docker_id"]
 			killed = row["killed"]
 			status = get_just_status(docker_id)
-			actions = "" if killed or status == "exited" or status == "pruned" else f"<a onclick=kill('{uid}')>Kill</a>"
-			actions += f"&nbsp;<a onclick=deleteJob('{uid}')>Delete</a>"
+			actions = "" if killed or status == "exited" or status == "pruned" else f"<a href=#  onclick=kill('{uid}') title='Kill Job'><i class=\\\"icon just_icon icon_process-stop\\\"></i></a>"
+			actions += f"&nbsp;<a href=# onclick=deleteJob('{uid}') title='Delete Job'><i class=\\\"icon just_icon icon_edit-delete\\\"></i></a>"
 			if status != "pruned":
-				actions += f"&nbsp;<a href=https://staminachecker.org/api/job?uid={uid} target=_blank>View</a>"
+				actions += f"&nbsp;<a href=https://staminachecker.org/api/job?uid={uid} target=_blank title='View Job'><i class=\\\"icon just_icon icon_link\\\"></i></a>"
 			table.append([
 				uid
 				, f"{docker_id[0:5]}..."
-				, row["name"] + f"&nbsp;<span class=small-edit onclick=\\\"requestRenameJob('{uid}')\\\"><i class=\\\"icon icon_document-edit\\\"></i></span>"
+				, row["name"] + f"&nbsp;<span class=small-edit onclick=\\\"requestRenameJob('{uid}')\\\"><i class=\\\"icon just_icon icon_document-edit\\\"></i></span>"
 				, row["created"]
 				, row["ip"]
 				, "Killed" if killed else status
@@ -518,7 +518,7 @@ kills a job
 	conn.execute("update jobs set killed = 1 where job_uid = ?", (jid,))
 	return "Success", 200
 	#del jobs[jid]
-	
+
 @app.route("/login", methods=["GET"])
 def login_page():
 	return render_template("login.html")
