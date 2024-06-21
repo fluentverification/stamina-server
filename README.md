@@ -6,6 +6,10 @@ This repository contains code to allow STAMINA to be run via a REST API.
 
 FLUENT has recieved some grant funding to use towards some Azure servers. While IBioSym is already running on these servers, we are trying to make STAMINA/STORM able to run on these Azure servers. This is why we have dockerized it and are writing this wrapper program to read REST API calls and start STAMINA.
 
+## Self Hosting
+
+Because this API is also open source, interested users can host their own versions of it, potentially without timeout limitations, and point the web frontend we have on [https://staminachecker.org/run](https://staminachecker.org/run) to their own servers (i.e., when the version we host is down). When a user changes the API URL to point to their server, it only changes for their browser, but is remembered by the website.
+
 ## Overview
 
 Each job is assigned a `id`, sometimes called a `jid` or `uid` for job ID or unique ID. These are stored in a hashed set and associated with an IP address. You can access the details of a job with its ID from any IP address (maybe should change this).
