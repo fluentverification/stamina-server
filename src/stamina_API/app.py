@@ -412,7 +412,7 @@ def admin():
 			actions = "" if killed or status == "exited" or status == "pruned" else f"<a href=#  onclick=kill('{uid}') title='Kill Job'><i class=\\\"icon just_icon bi-stop-circle\\\"></i></a>"
 			actions += f"&nbsp;<a href=# onclick=deleteJob('{uid}') title='Delete Job'><i class=\\\"icon just_icon bi-trash\\\"></i></a>"
 			if status != "pruned":
-				actions += f"&nbsp;<a href=https://staminachecker.org/api/job?uid={uid} target=_blank title='View Job'><i class=\\\"icon just_icon icon_link\\\"></i></a>"
+				actions += f"&nbsp;<a href=https://staminachecker.org/api/job?uid={uid} target=_blank title='View Job'><i class=\\\"icon just_icon bi-box-arrow-up-right\\\"></i></a>"
 			table.append([
 				uid
 				, f"{docker_id[0:5]}..."
