@@ -1,6 +1,6 @@
 #!flask/bin/python
 
-from flask import Flask, request, jsonify, Response, render_template
+from flask import Flask, request, jsonify, Response, render_template, abort
 import secrets
 import sys
 from time import time, sleep
@@ -19,6 +19,8 @@ from .log import *
 from .data import *
 #from .init_db import *
 from .admin import check_password
+
+BANNED_IPS = dict()
 
 TEMPLATE_FOLDER = None
 try:
@@ -78,6 +80,14 @@ Clean up old jobs
 	#for uid in uids_to_clean:
 		#del jobs[uid]
 	pass
+
+@app.before_request
+def ban_bots():
+	ip = get_client_ip()
+	# print(f"Before request. IP: {ip}")
+	# print(f"Banned IPs: {BANNED_IPS}")
+	if ip in BANNED_IPS:
+		abort(403)
 
 def get_client_ip():
 	# Get the IP if not behind a proxy
@@ -539,6 +549,14 @@ To be called when the program exits
 
 atexit.register(exit_handler)
 signal.signal(signal.SIGINT, exit_handler)
+
+try:
+	with open("banned_ips", 'r') as f:
+		for line in f:
+			ip = line.strip()
+			BANNED_IPS[ip] = True
+except FileNotFoundError:
+	print("Cannot find list of banned IPs")
 
 if __name__=="__main__":
 	if "--debug" in sys.argv or "-d" in sys.argv:
