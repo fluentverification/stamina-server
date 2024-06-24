@@ -409,14 +409,14 @@ def admin():
 			docker_id = row["docker_id"]
 			killed = row["killed"]
 			status = get_just_status(docker_id)
-			actions = "" if killed or status == "exited" or status == "pruned" else f"<a href=#  onclick=kill('{uid}') title='Kill Job'><i class=\\\"icon just_icon icon_process-stop\\\"></i></a>"
-			actions += f"&nbsp;<a href=# onclick=deleteJob('{uid}') title='Delete Job'><i class=\\\"icon just_icon icon_edit-delete\\\"></i></a>"
+			actions = "" if killed or status == "exited" or status == "pruned" else f"<a href=#  onclick=kill('{uid}') title='Kill Job'><i class=\\\"icon just_icon bi-stop-circle\\\"></i></a>"
+			actions += f"&nbsp;<a href=# onclick=deleteJob('{uid}') title='Delete Job'><i class=\\\"icon just_icon bi-trash\\\"></i></a>"
 			if status != "pruned":
 				actions += f"&nbsp;<a href=https://staminachecker.org/api/job?uid={uid} target=_blank title='View Job'><i class=\\\"icon just_icon icon_link\\\"></i></a>"
 			table.append([
 				uid
 				, f"{docker_id[0:5]}..."
-				, row["name"] + f"&nbsp;<span class=small-edit onclick=\\\"requestRenameJob('{uid}')\\\"><i class=\\\"icon just_icon icon_document-edit\\\"></i></span>"
+				, row["name"] + f"&nbsp;<span class=small-edit onclick=\\\"requestRenameJob('{uid}')\\\"><i class=\\\"icon just_icon bi-pencil\\\"></i></span>"
 				, row["created"]
 				, row["ip"]
 				, "Killed" if killed else status
