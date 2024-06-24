@@ -15,7 +15,7 @@ from .log import log
 
 client = docker.from_env()
 
-BASE_IMAGE="ifndefjosh/sstamina:qest23"
+BASE_IMAGE="ifndefjosh/sstamina:v3.0_d89a6c74e04d242fa68dd311df9c4bc7bb10ee95"
 # client.images.pull(BASE_IMAGE)
 
 SSTAMINA="/opt/stamina-storm/build/sstamina"
