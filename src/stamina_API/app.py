@@ -19,6 +19,7 @@ from .log import *
 from .data import *
 #from .init_db import *
 from .admin import check_password
+from .validate import *
 
 BANNED_IPS = dict()
 
@@ -255,6 +256,8 @@ def post_jobs():
 						  , after_error_msg = f"<br><h2>Your request:</h2> {json_to_table(request_data)}")
 			print(model_size)
 			print(prop_size)
+			if not validate_prop_file(prop_file) or not validate_model_file(model_file):
+				return create_html_err("File types invalid")
 			# Create a temporary path
 			path = f"{Settings.TMP_DIRECTORY_LOCATION}/{job_id}/"
 			if not os.path.isdir(path):
